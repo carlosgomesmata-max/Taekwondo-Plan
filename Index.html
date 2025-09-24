@@ -1,0 +1,1672 @@
+
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planear o Taekwondo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* gray-900 */
+            color: #d1d5db; /* gray-300 */
+        }
+        .glass-effect {
+            background: rgba(31, 41, 55, 0.7); /* gray-800 with opacity */
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(55, 65, 81, 0.3); /* gray-700 with opacity */
+        }
+        .modal { display: none; }
+        .modal.flex { display: flex; }
+        .modal-content { max-height: 90vh; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; cursor: pointer; }
+        .btn-primary { background-color: #4f46e5; color: white; }
+        .btn-primary:hover { background-color: #4338ca; }
+        .btn-secondary { background-color: #4b5563; color: white; }
+        .btn-secondary:hover { background-color: #6b7280; }
+        .btn-danger { background-color: #dc2626; color: white; }
+        .btn-danger:hover { background-color: #b91c1c; }
+        .btn-teal { background-color: #0d9488; color: white; }
+        .btn-teal:hover { background-color: #0f766e; }
+        .nav-button.active {
+             background-color: #4f46e5;
+             color: white;
+        }
+        .session-square {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            font-size: 0.65rem; /* Reduzi o tamanho da letra para tornar o botão mais pequeno */
+            line-height: 1;
+        }
+        .session-square.logged::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background-color: #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            border: 1px solid #1f2937; /* gray-800 */
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="app" style="display: none;">
+        <!-- Navigation Bar -->
+        <nav class="glass-effect sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex-shrink-0">
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">Planear o Taekwondo</h1>
+                             <div class="flex items-center gap-2">
+                                 <span class="text-xs font-medium text-gray-400">ID de Treinador:</span>
+                                 <span id="user-id-display" class="text-xs font-semibold text-gray-300"></span>
+                             </div>
+                        </div>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#" id="nav-meus-planos" onclick="window.showView('training-plans-list-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Os Meus Planos</a>
+                            <a href="#" id="nav-novo-plano" onclick="window.createNewTrainingPlan()" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Novo Plano</a>
+                            <a href="#" id="nav-novo-exercicio" onclick="window.createNewExercise()" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Novo Exercício</a>
+                            <a href="#" id="nav-biblioteca" onclick="window.showView('exercise-library-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Biblioteca Partilhada</a>
+                            <a href="#" id="nav-mapa" onclick="window.showView('content-map-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Mapa de Conteúdos</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Training Plans List View -->
+            <div id="training-plans-list-view" class="p-4 md:p-0 view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-white">Os Meus Planos de Treino (Privados)</h2>
+                    <button onclick="window.createNewTrainingPlan()" class="btn btn-primary">Criar Novo Plano</button>
+                </div>
+                <div id="plans-list-container" class="space-y-4"></div>
+            </div>
+
+            <!-- Training Plan Editor View -->
+            <div id="training-plan-editor-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
+                <h2 class="text-3xl font-bold text-white mb-6" id="editor-title">Novo Plano de Treino</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="plan-metadata-grid"></div>
+                <div id="training-plan-sections" class="space-y-8"></div>
+                <div class="mt-8 flex flex-wrap gap-4 justify-end items-center">
+                     <div class="flex items-center gap-2 mr-4">
+                         <span class="text-sm font-medium text-gray-400">Tempo Total de Treino:</span>
+                         <div id="footer-calculated-total-time" class="text-lg font-bold text-white bg-gray-900 px-3 py-1 rounded-md">0 min</div>
+                     </div>
+                    <button onclick="window.showView('training-plans-list-view')" class="btn btn-secondary">Cancelar</button>
+                    <button onclick="window.exportPlanToPDF()" class="btn btn-teal">Exportar PDF</button>
+                    <button onclick="window.saveTrainingPlan()" class="btn btn-primary">Guardar Plano</button>
+                </div>
+            </div>
+            
+            <!-- Exercise Library View -->
+            <div id="exercise-library-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-white">Biblioteca de Exercícios (Partilhada)</h2>
+                    <button onclick="window.createNewExercise()" class="btn btn-primary">Adicionar Exercício</button>
+                </div>
+                <div id="exercise-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Exercise Editor View -->
+            <div id="exercise-editor-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
+                <h3 class="text-3xl font-bold text-white mb-6" id="exercise-editor-title">Novo Exercício</h3>
+                <form id="exercise-form" class="space-y-4"></form>
+                <div class="mt-8 flex flex-wrap gap-4 justify-end">
+                    <button type="button" onclick="window.cancelExerciseEdit()" class="btn btn-secondary">Cancelar</button>
+                    <button type="button" onclick="window.saveExercise()" class="btn btn-primary">Guardar Exercício</button>
+                </div>
+            </div>
+
+             <!-- Content Map View -->
+            <div id="content-map-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
+                <div class="flex flex-wrap gap-4 justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-white">Mapa de Conteúdos Trabalhados</h2>
+                    <div class="flex gap-2">
+                        <button id="add-sessions-btn" class="btn btn-secondary">+12 Sessões</button>
+                        <button id="generate-chart-btn" class="btn btn-primary">Gerar Gráfico</button>
+                    </div>
+                </div>
+                
+                <div class="mb-6" id="chart-container" style="display: none;">
+                    <canvas id="content-chart"></canvas>
+                    <div id="chart-legend" class="flex justify-center flex-wrap gap-x-4 gap-y-2 mt-4 text-xs">
+                         <div class="flex items-center gap-2">
+                             <span class="w-4 h-4 rounded" style="background-color: rgba(59, 130, 246, 0.8);"></span>
+                             <span>Capacidades Físicas</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <span class="w-4 h-4 rounded" style="background-color: rgba(16, 185, 129, 0.8);"></span>
+                             <span>Capacidades Coordenativas</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <span class="w-4 h-4 rounded" style="background-color: rgba(239, 68, 68, 0.8);"></span>
+                             <span>Conteúdos Técnico Táticos</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <span class="w-4 h-4 rounded" style="background-color: rgba(168, 85, 247, 0.8);"></span>
+                             <span>Capacidades Psicológicas/cognitivas</span>
+                         </div>
+                    </div>
+                </div>
+
+                <div id="content-grid-container" class="grid grid-cols-8 md:grid-cols-14 gap-2">
+                    <!-- Session squares will be generated by JS -->
+                </div>
+            </div>
+
+        </main>
+        
+        <!-- Modals -->
+        <div id="content-log-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+            <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl transform transition-all">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-medium text-white" id="content-log-modal-title">Registar Conteúdos da Sessão</h3>
+                    <button onclick="window.hideContentLogModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                </div>
+                <div id="content-log-checkboxes" class="space-y-4 overflow-y-auto max-h-[60vh]">
+                    <!-- Checkboxes will be rendered here -->
+                </div>
+                <div class="mt-6 flex justify-between items-center">
+                    <button id="delete-content-log-btn" class="btn btn-danger">Apagar Registo</button>
+                    <button id="save-content-log-btn" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="exercise-library-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+            <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl transform transition-all">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-medium text-white">Adicionar Exercício da Biblioteca</h3>
+                    <button onclick="window.hideExerciseLibraryModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                </div>
+                <div class="mb-4">
+                    <input type="text" id="library-search-input" placeholder="Pesquisar exercícios..." class="w-full text-sm bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white">
+                </div>
+                <div id="library-modal-list-container" class="space-y-2 overflow-y-auto max-h-[60vh]">
+                    <!-- Exercises will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="confirmation-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+                <h3 class="text-lg font-medium text-white" id="confirm-title">Tem a certeza?</h3>
+                <p class="text-sm text-gray-400 mt-2" id="confirm-message">Esta ação não pode ser revertida.</p>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="confirm-cancel-btn" class="btn btn-secondary">Cancelar</button>
+                    <button id="confirm-action-btn" class="btn btn-danger">Apagar</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="firebase-rules-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-yellow-400">Ação Necessária: Configurar Regras de Segurança</h3>
+                    <button onclick="document.getElementById('firebase-rules-modal').classList.remove('flex')" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                </div>
+                <p class="text-sm text-gray-300 mt-4">
+                    Ocorreu um erro de permissão. Para poder enviar ficheiros (imagens/vídeos), precisa de atualizar as regras de segurança do <strong>Firebase Storage</strong> no seu projeto.
+                </p>
+                <p class="text-sm text-gray-300 mt-2">
+                    Este passo é obrigatório e só precisa de ser feito uma vez.
+                </p>
+                <div class="mt-4">
+                    <label class="block text-sm font-semibold text-gray-200 mb-1">Copie e cole estas regras na sua consola Firebase:</label>
+                    <pre class="bg-gray-900 text-white p-3 rounded-md text-xs overflow-x-auto"><code>rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /artifacts/{appId}/users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}</code></pre>
+                </div>
+                <p class="text-sm text-gray-400 mt-3"><strong>Onde colar:</strong> Firebase Console > Storage > Rules (Regras)</p>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="document.getElementById('firebase-rules-modal').classList.remove('flex')" class="btn btn-primary">Entendido</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+    </div>
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50">
+        <p class="text-white text-xl animate-pulse">A carregar aplicação...</p>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // --- GLOBAL STATE & CONFIG ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        const getFirebaseConfig = () => {
+            if (typeof __firebase_config === 'undefined') {
+                console.warn("Firebase config not provided, using demo credentials.");
+                return { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
+            }
+            if (typeof __firebase_config === 'string') {
+                try {
+                    return JSON.parse(__firebase_config);
+                } catch (e) {
+                    console.error("Could not parse __firebase_config string:", e, __firebase_config);
+                    return null;
+                }
+            }
+            return __firebase_config;
+        };
+        const firebaseConfig = getFirebaseConfig();
+        
+        let db, auth, storage;
+        let userId = null;
+        let storageEnabled = false;
+        let currentEditingPlanId = null;
+        let currentEditingExerciseId = null;
+        let currentSectionIdForAddingExercise = null;
+        let confirmAction = () => {};
+        let currentTrainingPlan = {};
+        let allTrainingPlans = [];
+        let contentLog = {};
+        let contentChart = null;
+        let currentSessionIndex = null;
+        let numberOfSessions = 140;
+        let isInitialLoad = true;
+        let currentExerciseData = {};
+
+        const intensityOptions = ["Fraca - 50%", "Baixa - 70%", "Média 70 a 85%", "Alta 85 a 95%", "Extrema 95 a 100%"];
+
+        const defaultExerciseTypes = {
+            "Capacidades Físicas": ["Flexibilidade", "Velocidade", "Resistência", "Força"],
+            "Capacidades Coordenativas": ["Jogo", "Coordenação", "Equilíbrio", "Ritmo", "Manipulação", "Exercícios gímnicos"],
+            "Conteúdos Técnico Táticos": [
+                "Seogi Kisul", "Son Kisul Makis", "Son Kisul Gongkiok", "Yonsok Dongkia",
+                "Bal Kisul Chagis", "Bal Kisul Tuios", "Yonsok Chagui", "Poomsae",
+                "Kyorugi Competição", "Kyorugi Demonstração", "Hooshinsul",
+                "Sam bo Kyorugi", "Sam bo Kyorugi (Bal Kisul)"
+            ],
+            "Capacidades Psicológicas/cognitivas": [
+                "Atenção e Concentração",
+                "Motivação e Autoconfiança",
+                "Gestão de Stress e Ansiedade",
+                "Imagética e Visualização",
+                "Comunicação e Coesão de Grupo",
+                "Autorregulação e Autocontrolo"
+            ]
+        };
+        let allExerciseTypes = JSON.parse(JSON.stringify(defaultExerciseTypes));
+        let exerciseTypeCategories = Object.keys(allExerciseTypes);
+
+
+        const planMetadataFields = [
+            { id: "Treinador", label: "Treinador", type: "text" }, { id: "Local", label: "Local", type: "text" }, { id: "Data", label: "Data", type: "date" }, { id: "Plano.Nº", label: "Plano Nº", type: "number" },
+            { id: "Periodo", label: "Período", type: "select", options: ["Preparatório", "Competitivo", "Transitório"] },
+            { id: "Mesociclo", label: "Mesociclo", type: "select", options: ["Base", "Desenvolvimento", "Controlo", "Competição", "Manutenção"] },
+            { id: "Microciclo", label: "Microciclo", type: "select", options: ["Ajuste (AJ)", "Carga (CA)", "Impacto (IM)", "Ativação (AT)", "Competição (CO)", "Recuperação (RC)"] },
+            { id: "Intensidade", label: "Intensidade", type: "select", options: intensityOptions },
+            { id: "Volume", label: "Volume (min)", type: "number" }, { id: "Conteúdo", label: "Conteúdo", type: "select", options: ["Marcial", "Kyorugi", "Poomsae", "Infantil"] },
+            { id: "Objectivo Geral", label: "Objectivo Geral", type: "textarea" }, { id: "Objectivo Especifico", label: "Objectivo Específico", type: "textarea" },
+            { id: "Material", label: "Material", type: "textarea" }, { id: "Equipa", label: "Equipa", type: "text" }
+        ];
+
+        const trainingSections = [ { id: "parteInicial", title: "Parte Inicial" }, { id: "partePrincipal", title: "Parte Principal" }, { id: "parteFinal", title: "Parte Final" } ];
+        
+        const exerciseFields = [
+            { id: "name", label: "Nome do Exercício", type: "text" }, { id: "description", label: "Descrição", type: "textarea" }, { id: "organization", label: "Organização/Esquema", type: "textarea" },
+            { id: "successCriteria", label: "Critérios de Êxito", type: "textarea" }
+        ];
+        
+        const staticExerciseLoadFields = [
+            { id: "repeticoes", label: "Repetições", type: "text" }, { id: "series", label: "Séries", type: "text" }, { id: "pausa", label: "Pausa", type: "text" },
+            { id: "intensidade", label: "Intensidade", type: "select", options: intensityOptions }, { id: "tempo", label: "Tempo (min)", type: "text"}
+        ];
+
+
+        // --- FIREBASE & APP INITIALIZATION ---
+        if (firebaseConfig) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (firebaseConfig.storageBucket) {
+                    storage = getStorage(app);
+                    storageEnabled = true;
+                } else {
+                    console.warn("Firebase storageBucket not in config. File uploads disabled.");
+                }
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        initApp();
+                    } else {
+                        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                        (token ? signInWithCustomToken(auth, token) : signInAnonymously(auth)).catch(err => console.error("Auth Error:", err));
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Erro ao iniciar. Verifique a consola.</p>`;
+            }
+        } else {
+             document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Configuração da Base de Dados inválida.</p>`;
+        }
+        
+        function initApp() {
+            document.getElementById('user-id-display').innerText = userId;
+            if (isInitialLoad) {
+                setupEventListeners();
+            }
+            listenForContentTypes(); 
+            listenForExercises();
+            listenForTrainingPlans();
+            listenForContentLog();
+        }
+        
+        function finishInitialLoad() {
+            if (isInitialLoad) {
+                populateTrainingPlanForm();
+                populateExerciseForm();
+                renderTrainingSections();
+                showView('training-plans-list-view');
+                document.getElementById('app').style.display = 'block';
+                document.getElementById('loading-overlay').style.display = 'none';
+                isInitialLoad = false;
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('confirm-cancel-btn').addEventListener('click', hideConfirmationModal);
+            document.getElementById('confirm-action-btn').addEventListener('click', () => {
+                if(confirmAction) confirmAction();
+                hideConfirmationModal();
+            });
+            document.getElementById('library-search-input').addEventListener('input', (e) => {
+                renderExerciseLibraryForSelection(e.target.value);
+            });
+             document.getElementById('generate-chart-btn').addEventListener('click', generateContentChart);
+             document.getElementById('save-content-log-btn').addEventListener('click', saveContentLog);
+             document.getElementById('add-sessions-btn').addEventListener('click', addMoreSessions);
+             document.getElementById('delete-content-log-btn').addEventListener('click', deleteContentLog);
+        }
+
+        // --- VIEW MANAGEMENT ---
+        window.showView = (viewId) => {
+            document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            let activeButton;
+            if (viewId === 'training-plans-list-view') activeButton = document.getElementById('nav-meus-planos');
+            else if (viewId === 'training-plan-editor-view') {
+                 activeButton = document.getElementById(currentEditingPlanId ? 'nav-meus-planos' : 'nav-novo-plano' );
+            }
+            else if (viewId === 'exercise-library-view') activeButton = document.getElementById('nav-biblioteca');
+            else if (viewId === 'exercise-editor-view') {
+                activeButton = document.getElementById(currentEditingExerciseId ? 'nav-biblioteca' : 'nav-novo-exercicio');
+            }
+             else if (viewId === 'content-map-view') {
+                 activeButton = document.getElementById('nav-mapa');
+                 renderContentGrid();
+            }
+            if(activeButton) activeButton.classList.add('active');
+        };
+
+        // --- TRAINING PLAN LOGIC ---
+        function listenForTrainingPlans() {
+            if (!userId) return;
+            const q = query(collection(db, `artifacts/${appId}/users/${userId}/training_plans`));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('plans-list-container');
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="text-center text-gray-500">Ainda não criou nenhum plano.</p>';
+                    return;
+                }
+                allTrainingPlans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allTrainingPlans.sort((a, b) => (b.header?.Data || '').localeCompare(a.header?.Data || ''));
+                
+                container.innerHTML = allTrainingPlans.map(plan => `
+                    <div class="glass-effect rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-lg text-white">Plano Nº ${plan.header?.['Plano.Nº'] || 'N/A'} - ${plan.header?.Data || 'Sem data'}</h3>
+                            <p class="text-sm text-gray-400">${plan.header?.['Objectivo Geral'] || 'Sem objectivo'}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="window.duplicateTrainingPlan('${plan.id}')" class="btn btn-teal text-sm">Duplicar</button>
+                            <button onclick="window.editTrainingPlan('${plan.id}')" class="btn btn-secondary text-sm">Editar</button>
+                            <button onclick="window.confirmDelete('plan', '${plan.id}')" class="btn btn-danger text-sm">Apagar</button>
+                        </div>
+                    </div>
+                `).join('');
+            }, (error) => console.error("Error listening for plans:", error));
+        }
+        
+        window.createNewTrainingPlan = () => {
+            currentEditingPlanId = null;
+            document.getElementById('editor-title').innerText = 'Novo Plano de Treino';
+            currentTrainingPlan = { 
+                header: {}, 
+                parteInicial: [{ id: Date.now() + 1 }], 
+                partePrincipal: [{ id: Date.now() + 2 }], 
+                parteFinal: [{ id: Date.now() + 3 }] 
+            };
+            planMetadataFields.forEach(f => {
+                currentTrainingPlan.header[f.id] = f.type === 'date' ? new Date().toISOString().split('T')[0] : '';
+            });
+            renderTrainingPlanHeader();
+            renderTrainingPlanExercises();
+            showView('training-plan-editor-view');
+        };
+
+        window.editTrainingPlan = async (planId) => {
+            if (!userId) return;
+            try {
+                const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, planId));
+                if (docSnap.exists()) {
+                    currentEditingPlanId = planId;
+                    currentTrainingPlan = docSnap.data();
+                    trainingSections.forEach(sec => {
+                        if (!Array.isArray(currentTrainingPlan[sec.id])) {
+                           currentTrainingPlan[sec.id] = [];
+                        }
+                    });
+                    document.getElementById('editor-title').innerText = `Editar Plano Nº ${currentTrainingPlan.header?.['Plano.Nº'] || ''}`;
+                    renderTrainingPlanHeader();
+                    renderTrainingPlanExercises();
+                    showView('training-plan-editor-view');
+                }
+            } catch (error) {
+                console.error("Error loading plan:", error); showToast("Erro ao carregar o plano.", true);
+            }
+        };
+
+        window.duplicateTrainingPlan = async (planId) => {
+            if (!userId) return;
+            const originalPlan = allTrainingPlans.find(p => p.id === planId);
+            if (!originalPlan) {
+                showToast("Plano original não encontrado.", true);
+                return;
+            }
+
+            const newPlan = JSON.parse(JSON.stringify(originalPlan)); // Deep copy
+            delete newPlan.id; 
+            newPlan.header['Plano.Nº'] = `${originalPlan.header['Plano.Nº']} (Cópia)`;
+            newPlan.header['Data'] = new Date().toISOString().split('T')[0];
+            newPlan.createdAt = serverTimestamp();
+
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/training_plans`), newPlan);
+                showToast("Plano duplicado com sucesso!");
+            } catch (error) {
+                console.error("Erro ao duplicar plano:", error);
+                showToast("Erro ao duplicar o plano.", true);
+            }
+        };
+        
+        async function saveExercisesFromPlanToLibrary(plan) {
+            if (!userId) return;
+            
+            const exercisesRef = collection(db, `public_exercises`);
+            const librarySnapshot = await getDocs(exercisesRef);
+            const libraryExercises = librarySnapshot.docs.map(doc => doc.data());
+            const libraryExerciseNames = new Set(libraryExercises.map(ex => ex.name));
+
+            const planExercises = [
+                ...(plan.parteInicial || []),
+                ...(plan.partePrincipal || []),
+                ...(plan.parteFinal || [])
+            ];
+
+            const newExercisesToSave = [];
+
+            for (const ex of planExercises) {
+                const exerciseName = ex.descricao; // Using 'descricao' as the unique name identifier
+                
+                if (exerciseName && !libraryExerciseNames.has(exerciseName)) {
+                    const newLibraryExercise = {
+                        name: exerciseName,
+                        tipo: ex.tipo || '',
+                        description: ex.descricao || '',
+                        organization: ex.organizacao || '',
+                        successCriteria: ex.criteriosExito || '',
+                        repeticoes: ex.repeticoes || '',
+                        series: ex.series || '',
+                        pausa: ex.pausa || '',
+                        intensidade: ex.intensidade || '',
+                        tempo: ex.tempo || '',
+                        createdBy: userId,
+                        createdAt: serverTimestamp()
+                    };
+                    
+                    newExercisesToSave.push(newLibraryExercise);
+                    libraryExerciseNames.add(exerciseName); // Avoid duplicates from the same plan
+                }
+            }
+
+            if (newExercisesToSave.length > 0) {
+                for (const exerciseToSave of newExercisesToSave) {
+                    await addDoc(exercisesRef, exerciseToSave);
+                }
+                showToast(`${newExercisesToSave.length} novo(s) exercício(s) guardado(s) na biblioteca partilhada!`);
+            }
+        }
+
+        window.saveTrainingPlan = async () => {
+            if (!userId) return;
+            
+            if (!currentTrainingPlan.header['Plano.Nº'] || !currentTrainingPlan.header.Data) {
+                showToast("O Nº do Plano e a Data são obrigatórios.", true);
+                return;
+            }
+
+            try {
+                await saveExercisesFromPlanToLibrary(currentTrainingPlan);
+
+                const planToSave = JSON.parse(JSON.stringify(currentTrainingPlan));
+
+                if (currentEditingPlanId) {
+                    await setDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, currentEditingPlanId), planToSave, { merge: true });
+                    showToast("Plano atualizado com sucesso!");
+                } else {
+                    planToSave.createdAt = serverTimestamp();
+                    await addDoc(collection(db, `artifacts/${appId}/users/${userId}/training_plans`), planToSave);
+                    showToast("Plano criado com sucesso!");
+                }
+                currentEditingPlanId = null;
+                showView('training-plans-list-view');
+            } catch (error) {
+                console.error("Erro ao guardar plano:", error);
+                showToast("Erro ao guardar o plano.", true);
+            }
+        };
+
+        window.deleteTrainingPlan = async (planId) => {
+            if (!userId) return;
+            try {
+                if (storageEnabled) {
+                    const planDoc = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, planId));
+                    if (planDoc.exists()) {
+                        const planData = planDoc.data();
+                        for (const section of trainingSections) {
+                            if (Array.isArray(planData[section.id])) {
+                                for (const exercise of planData[section.id]) {
+                                    if (exercise.filePath) {
+                                        await deleteFile(exercise.filePath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, planId));
+                showToast("Plano apagado com sucesso.");
+            } catch (error) {
+                console.error("Erro ao apagar plano:", error); showToast("Erro ao apagar o plano.", true);
+            }
+        };
+
+        function populateTrainingPlanForm() {
+            const grid = document.getElementById('plan-metadata-grid');
+            grid.innerHTML = planMetadataFields.map(field => {
+                let inputHtml;
+                const baseClasses = "w-full text-sm bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white h-[34px]";
+                const eventHandler = `oninput="updatePlanHeader('${field.id}', this.value)" onchange="updatePlanHeader('${field.id}', this.value)"`;
+                if (field.type === 'select') {
+                    const optionsHtml = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                    inputHtml = `<select id="field-${field.id}" ${eventHandler} class="${baseClasses}">${optionsHtml}</select>`;
+                } else if (field.type === 'textarea') {
+                     inputHtml = `<textarea id="field-${field.id}" ${eventHandler} class="w-full text-sm bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white" rows="2"></textarea>`;
+                } else {
+                    inputHtml = `<input type="${field.type}" id="field-${field.id}" ${eventHandler} class="${baseClasses}">`;
+                }
+                
+                let finalHtml = `
+                    <div class="${field.type === 'textarea' ? 'md:col-span-2' : ''}">
+                        <label for="field-${field.id}" class="block text-sm font-medium text-gray-400 mb-1">${field.label}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+
+                if (field.id === 'Volume') {
+                    finalHtml += `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Tempo Total (Exercícios)</label>
+                            <div id="calculated-total-time" class="w-full text-sm bg-gray-900 border border-gray-700 rounded-md py-1 px-2 text-white h-[34px] flex items-center font-semibold">0 min</div>
+                        </div>
+                    `;
+                }
+                return finalHtml;
+
+            }).join('');
+        }
+        
+        function renderTrainingPlanHeader() {
+            planMetadataFields.forEach(field => {
+                const el = document.getElementById(`field-${field.id}`);
+                if (el) el.value = currentTrainingPlan.header?.[field.id] || '';
+            });
+        }
+        
+        window.updatePlanHeader = (fieldId, value) => {
+            if(currentTrainingPlan && currentTrainingPlan.header) {
+                currentTrainingPlan.header[fieldId] = value;
+            }
+        };
+        
+        function renderTrainingSections() {
+            const container = document.getElementById('training-plan-sections');
+            container.innerHTML = trainingSections.map(section => `
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-xl font-semibold text-white mb-4">${section.title}</h3>
+                    <div id="${section.id}-exercises-container" class="space-y-4"></div>
+                    <div class="flex gap-2 mt-4 justify-end">
+                        <button onclick="window.addExerciseToPlan('${section.id}')" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold text-xs py-1 px-3 rounded-md transition">+ Adicionar Exercício</button>
+                        <button onclick="window.showExerciseLibraryModal('${section.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-1 px-3 rounded-md transition">Adicionar da Biblioteca</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTrainingPlanExercises() {
+            trainingSections.forEach(section => {
+                const container = document.getElementById(`${section.id}-exercises-container`);
+                const exercises = currentTrainingPlan[section.id] || [];
+                container.innerHTML = exercises.length === 0
+                    ? `<p class="text-center italic text-gray-500 py-4">Nenhum exercício adicionado a esta secção.</p>`
+                    : exercises.map((ex, index) => {
+                        const baseInputClasses = "w-full text-sm bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white";
+                        const centeredInputClasses = `${baseInputClasses} text-center`;
+                        const labelClasses = "block text-sm font-medium text-gray-400 mb-1";
+                        const tipoOptions = exerciseTypeCategories.map(cat => `<option value="${cat}" ${ex.tipo === cat ? 'selected' : ''}>${cat}</option>`).join('');
+                        let fileUploadInput = '';
+                        let mediaPreview = '';
+                        if (storageEnabled) {
+                            if (ex.mediaUrl) {
+                                if (ex.mediaType?.startsWith('image/')) {
+                                    mediaPreview = `<img src="${ex.mediaUrl}" class="rounded-md max-h-40 w-auto">`;
+                                } else if (ex.mediaType?.startsWith('video/')) {
+                                    mediaPreview = `<video src="${ex.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
+                                }
+                            }
+                            fileUploadInput = `<input type="file" class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleFileUpload('${section.id}', ${index}, this.files[0])">`;
+                        }
+                        const mediaPreviewContainer = `<div id="media-preview-${section.id}-${index}" class="mt-2">${mediaPreview}</div>`;
+                        return `
+                        <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 relative">
+                            <button onclick="window.removeExerciseFromPlan('${section.id}', ${index})" class="absolute top-2 right-2 text-red-400 hover:text-red-300 text-2xl leading-none z-10">&times;</button>
+                            <div class="flex flex-wrap gap-2">
+                                <select oninput="updateExerciseInPlan('${section.id}', ${index}, 'tipo', this.value)" class="${baseInputClasses} flex-1 min-w-[120px]"><option value="" disabled ${!ex.tipo ? 'selected' : ''}>Tipo de Exercício</option>${tipoOptions}</select>
+                                <input type="text" placeholder="Repetições" value="${ex.repeticoes || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'repeticoes', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
+                                <input type="text" placeholder="Séries" value="${ex.series || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'series', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
+                                <input type="text" placeholder="Pausa" value="${ex.pausa || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'pausa', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
+                                <select oninput="updateExerciseInPlan('${section.id}', ${index}, 'intensidade', this.value)" class="${baseInputClasses} flex-1 min-w-[120px]"><option value="" disabled ${!ex.intensidade ? 'selected' : ''}>Intensidade</option>${intensityOptions.map(opt => `<option value="${opt}" ${ex.intensidade === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select>
+                                <input type="text" placeholder="Tempo (min)" value="${ex.tempo || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'tempo', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
+                            </div>
+                            <div class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="${labelClasses}">Descrição</label>
+                                    <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'descricao', this.value)" class="${baseInputClasses}" rows="4">${ex.descricao || ''}</textarea>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
+                                        ${fileUploadInput}
+                                    </div>
+                                    <div class="bg-gray-700 border border-gray-600 rounded-md p-2">
+                                        <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'organizacao', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4">${ex.organizacao || ''}</textarea>
+                                        ${mediaPreviewContainer}
+                                    </div>
+                                </div>
+                                <div class="md:col-span-1">
+                                    <label class="${labelClasses}">Critérios Êxito</label>
+                                    <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'criteriosExito', this.value)" class="${baseInputClasses}" rows="4">${ex.criteriosExito || ''}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+            });
+            updateCalculatedTotalTime();
+        }
+
+        window.addExerciseToPlan = (sectionId) => {
+            if (!currentTrainingPlan[sectionId]) currentTrainingPlan[sectionId] = [];
+            currentTrainingPlan[sectionId].push({ id: Date.now() });
+            renderTrainingPlanExercises();
+        };
+
+        window.updateExerciseInPlan = (sectionId, index, field, value) => {
+            if (currentTrainingPlan[sectionId]?.[index]) {
+                currentTrainingPlan[sectionId][index][field] = value;
+                if (field === 'tempo') {
+                    updateCalculatedTotalTime();
+                }
+            }
+        };
+        
+        window.removeExerciseFromPlan = async (sectionId, index) => {
+            if (storageEnabled) {
+                const exercise = currentTrainingPlan[sectionId]?.[index];
+                if (exercise && exercise.filePath) {
+                    await deleteFile(exercise.filePath);
+                }
+            }
+            currentTrainingPlan[sectionId]?.splice(index, 1);
+            renderTrainingPlanExercises();
+        };
+
+        // --- FILE HANDLING ---
+        window.handleFileUpload = async (sectionId, index, file) => {
+            if (!storageEnabled || !userId || !file) {
+                if (!storageEnabled) showToast("O armazenamento de ficheiros não está configurado.", true);
+                return;
+            }
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast("Tipo de ficheiro não suportado.", true); return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showToast("O ficheiro é demasiado grande (Máx: 10MB).", true); return;
+            }
+            const previewId = `media-preview-${sectionId}-${index}`;
+            const previewContainer = document.getElementById(previewId);
+            if (!previewContainer) {
+                console.error("Contentor de pré-visualização não encontrado:", previewId);
+                showToast("Erro: Não foi possível encontrar a área de pré-visualização.", true);
+                return;
+            }
+            const localUrl = URL.createObjectURL(file);
+            let previewHtml = '';
+            if (file.type.startsWith('image/')) {
+                previewHtml = `<img src="${localUrl}" class="rounded-md max-h-40 w-auto">`;
+            } else if (file.type.startsWith('video/')) {
+                previewHtml = `<video src="${localUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
+            }
+            previewContainer.innerHTML = previewHtml;
+            const toastId = showToast(`A enviar ${file.name}...`, false, true);
+            const exercise = currentTrainingPlan[sectionId]?.[index];
+            if (exercise && exercise.filePath) {
+                await deleteFile(exercise.filePath).catch(err => console.warn("Não foi possível apagar ficheiro antigo", err));
+            }
+            const filePath = `artifacts/${appId}/users/${userId}/schemes/${Date.now()}-${file.name}`;
+            const fileRef = ref(storage, filePath);
+            try {
+                const snapshot = await uploadBytes(fileRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                updateExerciseInPlan(sectionId, index, 'mediaUrl', downloadURL);
+                updateExerciseInPlan(sectionId, index, 'filePath', filePath);
+                updateExerciseInPlan(sectionId, index, 'mediaType', file.type);
+                const previewElement = previewContainer.querySelector('img, video');
+                if (previewElement) previewElement.src = downloadURL;
+                showToast("Ficheiro enviado com sucesso!", false, false, toastId);
+            } catch (error) {
+                console.error("Erro no envio do ficheiro:", error);
+                let errorMessage = "Erro ao enviar o ficheiro.";
+                if (error.code === 'storage/unauthorized') {
+                    errorMessage = "Erro de permissão no Firebase Storage.";
+                    showFirebaseRulesModal();
+                }
+                showToast(errorMessage, true, false, toastId);
+                previewContainer.innerHTML = `<p class="text-xs text-red-400">Falha no envio.</p>`;
+            }
+        };
+
+        async function deleteFile(filePath) {
+            if (!storageEnabled || !filePath) return;
+            try {
+                const fileRef = ref(storage, filePath);
+                await deleteObject(fileRef);
+            } catch (error) {
+                if (error.code !== 'storage/object-not-found') {
+                     console.error("Erro ao apagar ficheiro:", error);
+                }
+            }
+        }
+
+        function updateCalculatedTotalTime() {
+            if (!currentTrainingPlan) return 0;
+
+            let totalMinutes = 0;
+            trainingSections.forEach(section => {
+                const exercises = currentTrainingPlan[section.id] || [];
+                exercises.forEach(ex => {
+                    const time = parseFloat(ex.tempo);
+                    if (!isNaN(time)) {
+                        totalMinutes += time;
+                    }
+                });
+            });
+
+            const headerDisplayElement = document.getElementById('calculated-total-time');
+            if (headerDisplayElement) {
+                headerDisplayElement.textContent = `${totalMinutes} min`;
+            }
+            const footerDisplayElement = document.getElementById('footer-calculated-total-time');
+            if (footerDisplayElement) {
+                footerDisplayElement.textContent = `${totalMinutes} min`;
+            }
+            return totalMinutes;
+        }
+
+        // --- EXERCISE LIBRARY LOGIC ---
+        function listenForContentTypes() {
+            if (!userId) return;
+            // Content types remain user-specific for now to allow customization
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, 'contentTypes');
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    let data = docSnap.data();
+                    let needsUpdate = false;
+                    for (const category in defaultExerciseTypes) {
+                        if (!data.hasOwnProperty(category) || !Array.isArray(data[category])) {
+                            data[category] = defaultExerciseTypes[category];
+                            needsUpdate = true;
+                        }
+                    }
+                    allExerciseTypes = data;
+                    if (needsUpdate) {
+                        setDoc(docRef, allExerciseTypes, { merge: true });
+                    }
+                } else {
+                    setDoc(docRef, defaultExerciseTypes);
+                    allExerciseTypes = JSON.parse(JSON.stringify(defaultExerciseTypes));
+                }
+                exerciseTypeCategories = Object.keys(allExerciseTypes);
+                
+                finishInitialLoad(); 
+            });
+        }
+
+        function listenForExercises() {
+            if (!userId) return;
+            // UPDATED: Listen to the public collection
+            const q = query(collection(db, `public_exercises`));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('exercise-list-container');
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="text-center text-gray-500 col-span-full">A biblioteca partilhada está vazia.</p>';
+                    return;
+                }
+                container.innerHTML = snapshot.docs.map(doc => {
+                    const exercise = { id: doc.id, ...doc.data() };
+                     const loadParamsFields = [
+                          {id: 'tipo', label: 'Tipo'},
+                          ...staticExerciseLoadFields
+                     ];
+                     const loadParams = loadParamsFields.map(f => {
+                          let value = exercise[f.id] || '-';
+                          return `<div class="text-center"><strong>${f.label.slice(0,4)}:</strong><br>${value}</div>`
+                    }).join('');
+                    
+                    // Show Edit/Delete buttons only if the user is the creator
+                    const actionButtons = exercise.createdBy === userId ? `
+                        <button onclick="window.showExerciseEditor('${exercise.id}')" class="btn btn-secondary text-sm">Editar</button>
+                        <button onclick="window.confirmDelete('exercise', '${exercise.id}')" class="btn btn-danger text-sm">Apagar</button>
+                    ` : '';
+
+                    return `
+                        <div class="glass-effect rounded-lg p-4 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-lg text-white">${exercise.name}</h4>
+                                <p class="text-sm text-gray-400 mt-1 mb-2">${exercise.description || ''}</p>
+                                <div class="mt-2 pt-2 border-t border-gray-700 text-xs grid grid-cols-6 gap-1">${loadParams}</div>
+                            </div>
+                            <div class="flex space-x-2 mt-4 self-end">
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }, (error) => console.error("Error listening for exercises:", error));
+        }
+
+        window.saveExercise = async () => {
+            if (!userId) return;
+            const exerciseData = { ...currentExerciseData };
+            const allFields = [...exerciseFields, {id: 'tipo'}, ...staticExerciseLoadFields];
+            allFields.forEach(f => {
+                const el = document.getElementById(`ex-field-${f.id}`);
+                if (el) exerciseData[f.id] = el.value;
+            });
+            
+            if (!exerciseData.name || exerciseData.name.trim() === "" || exerciseData.name === "Novo Exercício...") {
+                showToast("O nome do exercício é obrigatório.", true);
+                return;
+            }
+            
+            try {
+                // UPDATED: Ensure createdBy is set
+                exerciseData.createdBy = userId; 
+                // UPDATED: Save to the public collection
+                await setDoc(doc(db, `public_exercises`, currentEditingExerciseId), exerciseData, { merge: true });
+                showToast("Exercício guardado na biblioteca partilhada!");
+                showView('exercise-library-view');
+            } catch (error) {
+                console.error("Erro ao guardar exercício:", error); showToast("Erro ao guardar o exercício.", true);
+            }
+        };
+
+        window.cancelExerciseEdit = async () => {
+            try {
+                // UPDATED: Path to public collection
+                const docRef = doc(db, `public_exercises`, currentEditingExerciseId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().name === "Novo Exercício...") {
+                    await deleteExercise(currentEditingExerciseId, true); 
+                }
+            } catch (error) {
+                console.error("Could not check/delete draft exercise", error);
+            }
+            showView('exercise-library-view');
+        }
+
+        window.deleteExercise = async (exerciseId, suppressToast = false) => {
+             if (!userId) return;
+            try {
+                // UPDATED: Path to public collection
+                const docRef = doc(db, `public_exercises`, exerciseId);
+                const docSnap = await getDoc(docRef);
+
+                // Security check on client-side for better UX
+                if (docSnap.exists() && docSnap.data().createdBy !== userId) {
+                    showToast("Não pode apagar um exercício que não criou.", true);
+                    return;
+                }
+
+                if (docSnap.exists() && docSnap.data().filePath) {
+                    await deleteFile(docSnap.data().filePath);
+                }
+                await deleteDoc(docRef);
+                if (!suppressToast) {
+                    showToast("Exercício apagado com sucesso.");
+                }
+            } catch (error) {
+                console.error("Erro ao apagar exercício:", error); showToast("Erro ao apagar o exercício.", true);
+            }
+        };
+        
+        function populateExerciseForm() {
+            const form = document.getElementById('exercise-form');
+            if (!form) return;
+            
+            const baseClasses = "w-full text-sm bg-gray-600 border-gray-500 rounded-md py-1 px-2 text-white";
+            const centeredInputClasses = `${baseClasses} text-center`;
+            const labelClasses = "block text-sm font-medium text-gray-400 mb-1";
+
+            const nameField = exerciseFields.find(f => f.id === 'name');
+            const descriptionField = exerciseFields.find(f => f.id === 'description');
+            const organizationField = exerciseFields.find(f => f.id === 'organization');
+            const criteriaField = exerciseFields.find(f => f.id === 'successCriteria');
+
+            const optionsHtml = exerciseTypeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+            const staticFieldsHtml = staticExerciseLoadFields.map(f => {
+                if (f.type === 'select') {
+                    const optionsHtml = f.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                    return `<select id="ex-field-${f.id}" class="${baseClasses} flex-1 min-w-[120px]">
+                                <option value="" disabled selected>${f.label}</option>
+                                ${optionsHtml}
+                            </select>`;
+                } else {
+                    return `<input type="text" placeholder="${f.label}" id="ex-field-${f.id}" class="${centeredInputClasses} flex-1 min-w-[80px]">`;
+                }
+            }).join('');
+
+            form.innerHTML = `
+                <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 space-y-4">
+                    <div>
+                        <label for="ex-field-${nameField.id}" class="${labelClasses}">${nameField.label}</label>
+                        <input type="${nameField.type}" id="ex-field-${nameField.id}" class="${baseClasses}">
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                         <select id="ex-field-tipo" class="${baseClasses} flex-1 min-w-[120px]">
+                            <option value="" disabled selected>Tipo de Exercício</option>
+                            ${optionsHtml}
+                         </select>
+                        ${staticFieldsHtml}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="${labelClasses}">${descriptionField.label}</label>
+                            <textarea id="ex-field-${descriptionField.id}" class="${baseClasses}" rows="4"></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                             <div id="ex-media-container" class="flex justify-between items-center mb-1">
+                                 <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
+                                 <!-- JS will populate this -->
+                             </div>
+                             <div class="bg-gray-600 border border-gray-500 rounded-md p-2">
+                                 <textarea id="ex-field-${organizationField.id}" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4"></textarea>
+                                 <div id="ex-media-preview" class="mt-2"></div>
+                             </div>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="${labelClasses}">${criteriaField.label}</label>
+                            <textarea id="ex-field-${criteriaField.id}" class="${baseClasses}" rows="4"></textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        window.createNewExercise = async () => {
+             if (!userId) {
+                 showToast("Erro: Utilizador não autenticado.", true);
+                 return;
+             }
+            try {
+                // UPDATED: Path to public collection and add createdBy
+                const newDocRef = await addDoc(collection(db, `public_exercises`), {
+                    name: "Novo Exercício...",
+                    createdAt: serverTimestamp(),
+                    createdBy: userId 
+                });
+                showExerciseEditor(newDocRef.id);
+            } catch (error) {
+                console.error("Error creating new exercise document:", error);
+                showToast("Não foi possível criar um novo exercício.", true);
+            }
+        };
+
+        window.showExerciseEditor = async (exerciseId = null) => {
+            currentEditingExerciseId = exerciseId;
+            currentExerciseData = {};
+            document.getElementById('exercise-form').querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+
+            const mediaContainer = document.getElementById('ex-media-container');
+            const mediaPreview = document.getElementById('ex-media-preview');
+            mediaPreview.innerHTML = '';
+
+            mediaContainer.innerHTML = `
+                <div class="flex justify-between items-center w-full">
+                    <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
+                    <input type="file" 
+                        class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" 
+                        accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" 
+                        onchange="window.handleExerciseMediaUpload(this.files[0])">
+                </div>`;
+
+            if (exerciseId) {
+                try {
+                    // UPDATED: Path to public collection
+                    const docSnap = await getDoc(doc(db, `public_exercises`, exerciseId));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+
+                        // Security check for editing
+                        if (data.createdBy !== userId) {
+                            showToast("Não pode editar um exercício que não criou.", true);
+                            showView('exercise-library-view');
+                            return;
+                        }
+
+                        currentExerciseData = data;
+                        const title = data.name === "Novo Exercício..." ? "Novo Exercício" : "Editar Exercício";
+                        document.getElementById('exercise-editor-title').innerText = title;
+
+                        const allFields = [...exerciseFields, {id: 'tipo'}, ...staticExerciseLoadFields];
+                        allFields.forEach(field => {
+                            const el = document.getElementById(`ex-field-${field.id}`);
+                            if(el && data[field.id]) {
+                                 el.value = data[field.id];
+                            }
+                        });
+                        if (data.name === "Novo Exercício...") {
+                            document.getElementById('ex-field-name').value = "";
+                        }
+
+
+                        if (data.mediaUrl) {
+                            if (data.mediaType?.startsWith('image/')) {
+                                mediaPreview.innerHTML = `<img src="${data.mediaUrl}" class="rounded-md max-h-40 w-auto">`;
+                            } else if (data.mediaType?.startsWith('video/')) {
+                                mediaPreview.innerHTML = `<video src="${data.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
+                            }
+                        }
+                    }
+                } catch (error) { console.error("Error loading exercise:", error); return; }
+            }
+            showView('exercise-editor-view');
+        };
+
+        window.handleExerciseMediaUpload = async (file) => {
+            if (!storageEnabled || !userId || !file || !currentEditingExerciseId) {
+                if (!currentEditingExerciseId) showToast("Guarde o exercício antes de adicionar um ficheiro.", true);
+                return;
+            }
+            const mediaPreview = document.getElementById('ex-media-preview');
+            if (!mediaPreview) {
+                console.error("Contentor de pré-visualização 'ex-media-preview' não encontrado.");
+                return;
+            }
+            mediaPreview.innerHTML = '';
+            const localUrl = URL.createObjectURL(file);
+            if (file.type.startsWith('image/')) {
+                mediaPreview.innerHTML = `<img src="${localUrl}" class="rounded-md max-h-40 w-auto">`;
+            } else if (file.type.startsWith('video/')) {
+                mediaPreview.innerHTML = `<video src="${localUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
+            }
+            const toastId = showToast(`A enviar ${file.name}...`, false, true);
+            if (currentExerciseData && currentExerciseData.filePath) {
+                await deleteFile(currentExerciseData.filePath);
+            }
+            // UPDATED: Storage path reflects public nature (optional but good practice)
+            const filePath = `public_exercises_media/${currentEditingExerciseId}/${Date.now()}-${file.name}`;
+            const fileRef = ref(storage, filePath);
+            try {
+                const snapshot = await uploadBytes(fileRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                const updateData = {
+                    mediaUrl: downloadURL,
+                    filePath: filePath,
+                    mediaType: file.type
+                };
+                // UPDATED: Path to public collection
+                await setDoc(doc(db, `public_exercises`, currentEditingExerciseId), updateData, { merge: true });
+                currentExerciseData = { ...currentExerciseData, ...updateData };
+                const previewElement = mediaPreview.querySelector('img, video');
+                if (previewElement) previewElement.src = downloadURL;
+                showToast("Ficheiro enviado com sucesso!", false, false, toastId);
+            } catch (error) {
+                console.error("Erro no envio do ficheiro:", error);
+                let errorMessage = "Erro ao enviar o ficheiro.";
+                if (error.code === 'storage/unauthorized') {
+                    errorMessage = "Erro de permissão. Verifique as regras de segurança do Firebase Storage.";
+                    showFirebaseRulesModal();
+                } else if (error.code === 'storage/canceled') {
+                    errorMessage = "Envio cancelado.";
+                }
+                showToast(errorMessage, true, false, toastId);
+                mediaPreview.innerHTML = `<p class="text-xs text-red-400">Falha no envio.</p>`;
+            }
+        };
+        
+        // --- CONTENT MAP & CHART LOGIC ---
+
+        function listenForContentLog() {
+            if (!userId) return;
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    contentLog = data.log || {};
+                    numberOfSessions = data.sessionCount || 140;
+                } else {
+                    contentLog = {};
+                    numberOfSessions = 140;
+                }
+                if (document.getElementById('content-map-view').offsetParent !== null) {
+                    renderContentGrid();
+                }
+            });
+        }
+
+        function renderContentGrid() {
+            const container = document.getElementById('content-grid-container');
+            container.className = `grid grid-cols-12 md:grid-cols-24 gap-1`; // Make it responsive
+            let gridHtml = '';
+            for (let i = 0; i < numberOfSessions; i++) {
+                const isLogged = contentLog[i] && contentLog[i].length > 0;
+                gridHtml += `
+                    <button onclick="window.showContentLogModal(${i})" 
+                            class="session-square btn-secondary font-semibold rounded-md transition cursor-pointer p-0 ${isLogged ? 'logged' : ''}">
+                        UT${i + 1}
+                    </button>
+                `;
+            }
+            container.innerHTML = gridHtml;
+        }
+
+        async function addMoreSessions() {
+            numberOfSessions += 12;
+            try {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
+                await setDoc(docRef, { sessionCount: numberOfSessions }, { merge: true });
+                showToast(`+12 sessões adicionadas.`);
+            } catch (error) {
+                console.error("Error adding sessions:", error);
+                showToast("Erro ao adicionar sessões.", true);
+                numberOfSessions -= 12; // Revert on error
+            }
+        }
+        
+        window.showContentLogModal = (sessionIndex) => {
+            currentSessionIndex = sessionIndex;
+            const modal = document.getElementById('content-log-modal');
+            const container = document.getElementById('content-log-checkboxes');
+            const title = document.getElementById('content-log-modal-title');
+            
+            title.innerText = `Registar Conteúdos da Sessão UT${sessionIndex + 1}`;
+            
+            let checkboxesHtml = '';
+            for (const category in allExerciseTypes) {
+                const categoryId = category.replace(/[\s/]+/g, '-');
+                checkboxesHtml += `
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-white">${category}</h4>
+                        <button onclick="window.addNewContentType('${category}')" class="btn btn-secondary py-0.5 px-2 text-xs">+ Adicionar</button>
+                    </div>
+                    <div id="new-content-form-${categoryId}"></div>
+                    <div class="grid grid-cols-1 gap-2">`;
+                allExerciseTypes[category].forEach(type => {
+                    const isChecked = contentLog[sessionIndex]?.includes(type);
+                    checkboxesHtml += `
+                        <label class="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" value="${type}" ${isChecked ? 'checked' : ''} class="form-checkbox bg-gray-600 border-gray-500 rounded text-indigo-500 focus:ring-indigo-500">
+                            <span>${type}</span>
+                        </label>
+                    `;
+                });
+                checkboxesHtml += `</div></div>`;
+            }
+            container.innerHTML = checkboxesHtml;
+            modal.classList.add('flex');
+        };
+
+        window.hideContentLogModal = () => {
+             document.getElementById('content-log-modal').classList.remove('flex');
+        };
+        
+        window.addNewContentType = (category) => {
+            const categoryId = category.replace(/[\s/]+/g, '-');
+            const inputId = `new-content-input-${categoryId}`;
+
+            if (document.getElementById(inputId)) return;
+
+            const placeholderId = `new-content-form-${categoryId}`;
+            const placeholder = document.getElementById(placeholderId);
+            
+            if (placeholder) {
+                placeholder.innerHTML = `
+                    <div class="flex gap-2 my-2">
+                        <input type="text" id="${inputId}" placeholder="Novo conteúdo..." class="w-full text-sm bg-gray-900 border-gray-600 rounded-md py-1 px-2 text-white flex-grow">
+                        <button onclick="window.saveNewContentTypeHandler('${category}')" class="btn btn-primary text-xs py-1 px-2">Guardar</button>
+                    </div>
+                `;
+                document.getElementById(inputId).focus();
+            }
+        };
+
+        window.saveNewContentTypeHandler = async (category) => {
+            const categoryId = category.replace(/[\s/]+/g, '-');
+            const inputId = `new-content-input-${categoryId}`;
+            const inputElement = document.getElementById(inputId);
+            const newType = inputElement.value;
+
+            if (newType && newType.trim() !== '') {
+                const trimmedType = newType.trim();
+                if (allExerciseTypes[category].includes(trimmedType)) {
+                    showToast(`"${trimmedType}" já existe.`, true);
+                    return;
+                }
+
+                const updatedTypes = JSON.parse(JSON.stringify(allExerciseTypes));
+                updatedTypes[category].push(trimmedType);
+                
+                try {
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, 'contentTypes');
+                    await setDoc(docRef, updatedTypes);
+                    showToast(`"${trimmedType}" adicionado a ${category}.`);
+                } catch (error) {
+                    console.error("Error adding new content type:", error);
+                    showToast("Erro ao adicionar novo conteúdo.", true);
+                }
+            } else {
+                const placeholder = document.getElementById(`new-content-form-${categoryId}`);
+                if(placeholder) placeholder.innerHTML = '';
+            }
+        };
+
+        async function saveContentLog() {
+            if (currentSessionIndex === null || !userId) return;
+
+            const selectedContents = [];
+            document.querySelectorAll('#content-log-checkboxes input[type="checkbox"]:checked').forEach(input => {
+                selectedContents.push(input.value);
+            });
+
+            const newLog = { ...contentLog, [currentSessionIndex]: selectedContents };
+
+            try {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
+                await setDoc(docRef, { log: newLog }, { merge: true });
+                showToast(`Sessão UT${currentSessionIndex + 1} atualizada.`);
+                hideContentLogModal();
+            } catch (error) {
+                console.error("Error saving content log:", error);
+                showToast("Erro ao guardar o registo.", true);
+            }
+        }
+        
+        async function deleteContentLog() {
+            if (currentSessionIndex === null || !userId) return;
+
+            delete contentLog[currentSessionIndex];
+
+            try {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
+                await setDoc(docRef, { log: contentLog }, { merge: true });
+                showToast(`Registo da Sessão UT${currentSessionIndex + 1} apagado.`);
+                hideContentLogModal();
+            } catch (error) {
+                console.error("Error deleting content log:", error);
+                showToast("Erro ao apagar o registo.", true);
+            }
+        }
+
+        function generateContentChart() {
+            if (Object.keys(contentLog).length === 0) {
+                showToast("Nenhum conteúdo registado para gerar gráfico.", true);
+                return;
+            }
+
+            const contentCount = {};
+            Object.values(allExerciseTypes).flat().forEach(type => contentCount[type] = 0);
+
+            for (const session in contentLog) {
+                contentLog[session].forEach(type => {
+                    if (contentCount.hasOwnProperty(type)) {
+                        contentCount[type]++;
+                    }
+                });
+            }
+            
+            const findCategory = (type) => {
+                for (const category in allExerciseTypes) {
+                    if (allExerciseTypes[category].includes(type)) {
+                        return category;
+                    }
+                }
+                return null;
+            };
+
+            const categoryOrder = Object.keys(allExerciseTypes);
+
+            const sortedContent = Object.entries(contentCount)
+                .filter(([, count]) => count > 0)
+                .sort(([typeA, countA], [typeB, countB]) => {
+                    const categoryA = findCategory(typeA);
+                    const categoryB = findCategory(typeB);
+                    const indexA = categoryOrder.indexOf(categoryA);
+                    const indexB = categoryOrder.indexOf(categoryB);
+
+                    if (indexA !== indexB) {
+                        return indexA - indexB;
+                    }
+
+                    return countB - countA;
+                });
+            
+            if(sortedContent.length === 0) {
+                 showToast("Nenhum conteúdo registado para gerar gráfico.", true);
+                 return;
+            }
+            
+            const labels = sortedContent.map(([type]) => type);
+            const data = sortedContent.map(([, count]) => count);
+
+            const categoryColors = {
+                'Capacidades Físicas': 'rgba(59, 130, 246, 0.8)',
+                'Capacidades Coordenativas': 'rgba(16, 185, 129, 0.8)',
+                'Conteúdos Técnico Táticos': 'rgba(239, 68, 68, 0.8)',
+                'Capacidades Psicológicas/cognitivas': 'rgba(168, 85, 247, 0.8)'
+            };
+            const categoryBorders = {
+                 'Capacidades Físicas': 'rgba(59, 130, 246, 1)',
+                'Capacidades Coordenativas': 'rgba(16, 185, 129, 1)',
+                'Conteúdos Técnico Táticos': 'rgba(239, 68, 68, 1)',
+                'Capacidades Psicológicas/cognitivas': 'rgba(168, 85, 247, 1)'
+            };
+
+
+            const backgroundColors = labels.map(label => categoryColors[findCategory(label)] || 'rgba(107, 114, 128, 0.8)');
+            const borderColors = labels.map(label => categoryBorders[findCategory(label)] || 'rgba(107, 114, 128, 1)');
+
+
+            const chartContainer = document.getElementById('chart-container');
+            chartContainer.style.display = 'block';
+            const ctx = document.getElementById('content-chart').getContext('2d');
+
+            if (contentChart) {
+                contentChart.destroy();
+            }
+
+            contentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nº de Vezes Trabalhado',
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { color: '#d1d5db', stepSize: 1 }
+                        },
+                        y: {
+                            ticks: { color: '#d1d5db' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // We use the custom HTML legend
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // --- UTILITY FUNCTIONS (Toast, Modal, PDF, Library Modal) ---
+        
+        function showFirebaseRulesModal() {
+            const modal = document.getElementById('firebase-rules-modal');
+            if (modal) {
+                modal.classList.add('flex');
+            }
+        }
+
+        window.showExerciseLibraryModal = (sectionId) => {
+            currentSectionIdForAddingExercise = sectionId;
+            document.getElementById('library-search-input').value = '';
+            renderExerciseLibraryForSelection('');
+            document.getElementById('exercise-library-modal').classList.add('flex');
+        };
+
+        window.hideExerciseLibraryModal = () => {
+            document.getElementById('exercise-library-modal').classList.remove('flex');
+        };
+
+        async function renderExerciseLibraryForSelection(filterText) {
+            if (!userId) return;
+            const container = document.getElementById('library-modal-list-container');
+            container.innerHTML = '<p class="text-center text-gray-500">A carregar exercícios...</p>';
+
+            // UPDATED: Path to public collection
+            const q = query(collection(db, `public_exercises`));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                container.innerHTML = '<p class="text-center text-gray-500">A biblioteca partilhada está vazia.</p>';
+                return;
+            }
+
+            const exercises = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const lowerCaseFilter = filterText.toLowerCase();
+            const filteredExercises = exercises.filter(ex => ex.name.toLowerCase().includes(lowerCaseFilter));
+            
+            if (filteredExercises.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500">Nenhum exercício encontrado.</p>';
+                return;
+            }
+
+            container.innerHTML = filteredExercises.map(ex => `
+                <div class="bg-gray-700 rounded-lg p-3 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold text-white">${ex.name}</h4>
+                        <p class="text-xs text-gray-400">${(ex.description || '').substring(0, 50)}...</p>
+                    </div>
+                    <button onclick="window.addExerciseFromLibraryToPlan('${ex.id}')" class="btn btn-primary text-sm">Adicionar</button>
+                </div>
+            `).join('');
+        }
+
+        window.addExerciseFromLibraryToPlan = async (exerciseId) => {
+            if (!userId || !currentSectionIdForAddingExercise) return;
+
+            try {
+                // UPDATED: Path to public collection
+                const docSnap = await getDoc(doc(db, `public_exercises`, exerciseId));
+                if (docSnap.exists()) {
+                    const exerciseData = docSnap.data();
+                    
+                    const newPlanExercise = {
+                        id: Date.now(),
+                        descricao: exerciseData.name || '',
+                        tipo: exerciseData.tipo || '',
+                        organizacao: exerciseData.organization || '',
+                        criteriosExito: exerciseData.successCriteria || '',
+                        repeticoes: exerciseData.repeticoes || '',
+                        series: exerciseData.series || '',
+                        pausa: exerciseData.pausa || '',
+                        intensidade: exerciseData.intensidade || '',
+                        tempo: exerciseData.tempo || '',
+                    };
+
+                    if (!currentTrainingPlan[currentSectionIdForAddingExercise]) {
+                        currentTrainingPlan[currentSectionIdForAddingExercise] = [];
+                    }
+                    currentTrainingPlan[currentSectionIdForAddingExercise].push(newPlanExercise);
+                    renderTrainingPlanExercises();
+                    showToast(`'${exerciseData.name}' adicionado ao plano.`);
+                }
+            } catch (error) {
+                console.error("Error adding exercise from library:", error);
+                showToast("Erro ao adicionar exercício.", true);
+            }
+        };
+
+        function showToast(message, isError = false, isLoading = false, id = null) {
+            const container = document.getElementById('toast-container');
+            const toastId = id || `toast-${Date.now()}`;
+            
+            let existingToast = document.getElementById(toastId);
+            if (!existingToast) {
+                 existingToast = document.createElement('div');
+                 existingToast.id = toastId;
+                 container.appendChild(existingToast);
+            }
+
+            const bgColor = isError ? 'bg-red-500' : (isLoading ? 'bg-blue-500' : 'bg-green-500');
+            existingToast.className = `transform transition-all duration-300 text-white py-2 px-4 rounded-lg shadow-lg`;
+            existingToast.innerHTML = message;
+            existingToast.classList.add(bgColor);
+
+            setTimeout(() => {
+                existingToast.classList.add('opacity-100', 'translate-y-0');
+                existingToast.classList.remove('opacity-0', 'translate-y-20');
+            }, 10);
+
+            if (!isLoading) {
+                setTimeout(() => {
+                    existingToast.classList.add('opacity-0', 'translate-y-20');
+                    setTimeout(() => existingToast.remove(), 3000);
+                }, 3000);
+            }
+            return toastId;
+        }
+        
+        function showConfirmationModal(titleText, messageText) {
+            const modal = document.getElementById('confirmation-modal');
+            const title = document.getElementById('confirm-title');
+            const message = document.getElementById('confirm-message');
+            title.innerText = titleText;
+            message.innerText = messageText;
+            modal.classList.add('flex');
+        }
+
+        window.confirmDelete = (type, id) => {
+            if (type === 'plan') {
+                confirmAction = () => deleteTrainingPlan(id);
+                showConfirmationModal(
+                    "Apagar Plano de Treino?",
+                    "Esta ação irá apagar permanentemente o plano e todos os seus dados. Não pode ser revertida."
+                );
+            } else if (type === 'exercise') {
+                confirmAction = () => deleteExercise(id);
+                 showConfirmationModal(
+                    "Apagar Exercício?",
+                    "O exercício será removido da biblioteca partilhada. Apenas o autor o pode fazer."
+                );
+            }
+        };
+
+        function hideConfirmationModal() {
+            document.getElementById('confirmation-modal').classList.remove('flex');
+            confirmAction = () => {};
+        }
+
+        window.exportPlanToPDF = () => {
+            if (!currentTrainingPlan || !currentTrainingPlan.header) {
+                showToast("Não há plano para exportar.", true);
+                return;
+            }
+            const planTitle = `Plano_${currentTrainingPlan.header['Plano.Nº'] || 'SN'}_${currentTrainingPlan.header['Data'] || 'SD'}.pdf`;
+            const element = document.getElementById('training-plan-editor-view');
+            
+            const toastId = showToast("A gerar PDF...", false, true);
+
+            const buttons = element.querySelector('.flex.flex-wrap.gap-4.justify-end');
+            buttons.style.display = 'none';
+
+            html2pdf().from(element).set({
+                margin: 0.5,
+                filename: planTitle,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            }).save().then(() => {
+                showToast("PDF gerado com sucesso!", false, false, toastId);
+                buttons.style.display = 'flex';
+            }).catch(err => {
+                showToast("Erro ao gerar PDF.", true, false, toastId);
+                buttons.style.display = 'flex';
+                console.error(err);
+            });
+        };
+    </script>
+</body>
+</html>
+
