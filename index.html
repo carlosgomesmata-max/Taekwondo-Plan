@@ -1687,19 +1687,4 @@ service firebase.storage {
 
             html2pdf().from(element).set({
                 margin: 0.5,
-                filename: planTitle,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            }).save().then(() => {
-                showToast("PDF gerado com sucesso!", false, false, toastId);
-                buttons.style.display = 'flex';
-            }).catch(err => {
-                showToast("Erro ao gerar PDF.", true, false, toastId);
-                buttons.style.display = 'flex';
-                console.error(err);
-            });
-        };
-    </script>
-</body>
-</html>
+
