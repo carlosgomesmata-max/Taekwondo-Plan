@@ -77,6 +77,7 @@
                              </div>
                         </div>
                     </div>
+                    <!-- Menu para PC (escondido em ecrãs pequenos) -->
                     <div class="hidden md:block">
                         <div class="ml-10 flex items-baseline space-x-4">
                             <a href="#" id="nav-meus-planos" onclick="window.showView('training-plans-list-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Os Meus Planos</a>
@@ -86,7 +87,7 @@
                             <a href="#" id="nav-mapa" onclick="window.showView('content-map-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Mapa de Conteúdos</a>
                         </div>
                     </div>
-                    <!-- Hamburger button -->
+                    <!-- Botão Hambúrguer (só aparece em ecrãs pequenos) -->
                     <div class="-mr-2 flex md:hidden">
                         <button id="mobile-menu-button" type="button" class="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
                             <span class="sr-only">Abrir menu principal</span>
@@ -97,7 +98,7 @@
                     </div>
                 </div>
             </div>
-             <!-- Mobile menu, show/hide based on menu state. -->
+             <!-- Menu Móvel (escondido por defeito) -->
             <div class="md:hidden hidden" id="mobile-menu">
                 <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                     <a href="#" onclick="window.showView('training-plans-list-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Os Meus Planos</a>
