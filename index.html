@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
@@ -254,29 +255,23 @@ service firebase.storage {
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         // --- GLOBAL STATE & CONFIG ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = 'taekwondo-planner-public';
         
-        const getFirebaseConfig = () => {
-            if (typeof __firebase_config === 'undefined') {
-                console.warn("Firebase config not provided, using demo credentials.");
-                return { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
-            }
-            if (typeof __firebase_config === 'string') {
-                try {
-                    return JSON.parse(__firebase_config);
-                } catch (e) {
-                    console.error("Could not parse __firebase_config string:", e, __firebase_config);
-                    return null;
-                }
-            }
-            return __firebase_config;
+        // --- CONFIGURAÇÃO CORRETA DO FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCZR7XPf5o1Tel_kjfATfNu9hu7vlZc8DA",
+            authDomain: "apptkdplan.firebaseapp.com",
+            projectId: "apptkdplan",
+            storageBucket: "apptkdplan.appspot.com",
+            messagingSenderId: "545125407318",
+            appId: "1:545125407318:web:a8064dc609c5792564b9f7",
+            measurementId: "G-Z9QR3EM3XG"
         };
-        const firebaseConfig = getFirebaseConfig();
         
         let db, auth, storage;
         let userId = null;
@@ -343,7 +338,7 @@ service firebase.storage {
 
 
         // --- FIREBASE & APP INITIALIZATION ---
-        if (firebaseConfig) {
+        if (firebaseConfig && firebaseConfig.apiKey) {
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -361,8 +356,10 @@ service firebase.storage {
                         userId = user.uid;
                         initApp();
                     } else {
-                        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                        (token ? signInWithCustomToken(auth, token) : signInAnonymously(auth)).catch(err => console.error("Auth Error:", err));
+                        signInAnonymously(auth).catch(err => {
+                            console.error("Anonymous Sign In Error:", err);
+                            document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-center text-lg p-4">Falha na autenticação. Verifique se ativou o login anónimo e se autorizou o domínio na consola Firebase.</p>`;
+                        });
                     }
                 });
             } catch (error) {
@@ -370,7 +367,7 @@ service firebase.storage {
                 document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Erro ao iniciar. Verifique a consola.</p>`;
             }
         } else {
-             document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Configuração da Base de Dados inválida.</p>`;
+             document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Configuração do Firebase em falta. Edite o ficheiro index.html.</p>`;
         }
         
         function initApp() {
@@ -1668,4 +1665,3 @@ service firebase.storage {
     </script>
 </body>
 </html>
-
