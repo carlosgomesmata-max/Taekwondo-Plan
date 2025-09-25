@@ -277,10 +277,14 @@ service firebase.storage {
     </div>
     
     <script type="module">
+        console.log("DEBUG: O script começou a ser executado.");
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        console.log("DEBUG: Firebase SDKs importados.");
 
         // --- GLOBAL STATE & CONFIG ---
         const appId = 'taekwondo-planner-public';
@@ -295,6 +299,7 @@ service firebase.storage {
             appId: "1:545125407318:web:a8064dc609c5792564b9f7",
             measurementId: "G-Z9QR3EM3XG"
         };
+        console.log("DEBUG: Configuração do Firebase carregada:", firebaseConfig.projectId);
         
         let db, auth, storage;
         let userId = null;
@@ -363,9 +368,11 @@ service firebase.storage {
         // --- FIREBASE & APP INITIALIZATION ---
         if (firebaseConfig && firebaseConfig.apiKey) {
             try {
+                console.log("DEBUG: A inicializar Firebase...");
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                console.log("DEBUG: Firebase inicializado. A aguardar estado de autenticação...");
 
                 if (firebaseConfig.storageBucket) {
                     storage = getStorage(app);
@@ -375,10 +382,13 @@ service firebase.storage {
                 }
 
                 onAuthStateChanged(auth, user => {
+                    console.log("DEBUG: onAuthStateChanged ativado.");
                     if (user) {
+                        console.log("DEBUG: Utilizador encontrado (anónimo ou logado):", user.uid);
                         userId = user.uid;
                         initApp();
                     } else {
+                        console.log("DEBUG: Nenhum utilizador encontrado. A tentar login anónimo...");
                         signInAnonymously(auth).catch(err => {
                             console.error("Anonymous Sign In Error:", err);
                             document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-center text-lg p-4">Falha na autenticação. Verifique se ativou o login anónimo e se autorizou o domínio na consola Firebase.</p>`;
@@ -394,6 +404,7 @@ service firebase.storage {
         }
         
         function initApp() {
+            console.log("DEBUG: A iniciar a aplicação (initApp)...");
             document.getElementById('user-id-display').innerText = userId;
             if (isInitialLoad) {
                 setupEventListeners();
@@ -410,11 +421,13 @@ service firebase.storage {
         }
         
         function finishInitialLoad() {
+            console.log("DEBUG: A finalizar o carregamento inicial (finishInitialLoad)...");
             if (isInitialLoad) {
                 showView('training-plans-list-view');
                 document.getElementById('app').style.display = 'block';
                 document.getElementById('loading-overlay').style.display = 'none';
                 isInitialLoad = false;
+                console.log("DEBUG: Overlay de carregamento removido. A aplicação deve estar visível.");
             }
         }
 
@@ -1687,4 +1700,19 @@ service firebase.storage {
 
             html2pdf().from(element).set({
                 margin: 0.5,
-
+                filename: planTitle,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            }).save().then(() => {
+                showToast("PDF gerado com sucesso!", false, false, toastId);
+                buttons.style.display = 'flex';
+            }).catch(err => {
+                showToast("Erro ao gerar PDF.", true, false, toastId);
+                buttons.style.display = 'flex';
+                console.error(err);
+            });
+        };
+    </script>
+</body>
+</html>
