@@ -739,6 +739,7 @@ service firebase.storage {
                             }
                             fileUploadInput = `<input type="file" class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleFileUpload('${section.id}', ${index}, this.files[0])">`;
                         }
+                        const hasMedia = !!ex.mediaUrl;
                         const mediaPreviewContainer = `<div id="media-preview-${section.id}-${index}" class="mt-2">${mediaPreview}</div>`;
                         return `
                         <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 relative">
@@ -762,7 +763,7 @@ service firebase.storage {
                                         ${fileUploadInput}
                                     </div>
                                     <div class="bg-gray-700 border border-gray-600 rounded-md p-2">
-                                        <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'organizacao', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4">${ex.organizacao || ''}</textarea>
+                                        <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'organizacao', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4" style="display: ${hasMedia ? 'none' : 'block'};">${ex.organizacao || ''}</textarea>
                                         ${mediaPreviewContainer}
                                     </div>
                                 </div>
@@ -832,6 +833,8 @@ service firebase.storage {
                 previewHtml = `<video src="${localUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
             }
             previewContainer.innerHTML = previewHtml;
+            previewContainer.previousElementSibling.style.display = 'none'; // Esconde a textarea
+
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
             const exercise = currentTrainingPlan[sectionId]?.[index];
             if (exercise && exercise.filePath) {
@@ -1123,6 +1126,7 @@ service firebase.storage {
             currentEditingExerciseId = exerciseId;
             currentExerciseData = {};
             document.getElementById('exercise-form').querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+            document.getElementById('ex-field-organization').style.display = 'block'; // Mostra a textarea por defeito
 
             const mediaContainer = document.getElementById('ex-media-container');
             const mediaPreview = document.getElementById('ex-media-preview');
@@ -1173,6 +1177,7 @@ service firebase.storage {
                             } else if (data.mediaType?.startsWith('video/')) {
                                 mediaPreview.innerHTML = `<video src="${data.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
                             }
+                            document.getElementById('ex-field-organization').style.display = 'none'; // Esconde a textarea se houver media
                         }
                     }
                 } catch (error) { console.error("Error loading exercise:", error); return; }
@@ -1197,6 +1202,8 @@ service firebase.storage {
             } else if (file.type.startsWith('video/')) {
                 mediaPreview.innerHTML = `<video src="${localUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
             }
+            document.getElementById('ex-field-organization').style.display = 'none'; // Esconde a textarea
+
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
             if (currentExerciseData && currentExerciseData.filePath) {
                 await deleteFile(currentExerciseData.filePath);
