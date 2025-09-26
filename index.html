@@ -838,13 +838,11 @@ service firebase.storage {
             const exercise = currentTrainingPlan[sectionId]?.[index];
             if (!exercise) return;
             
-            // Lógica de pré-visualização
             const localUrl = URL.createObjectURL(file);
             exercise.localMediaUrl = localUrl;
             exercise.localMediaType = file.type;
             renderTrainingPlanExercises(); 
 
-            // Lógica de upload
             if (!storageEnabled || !userId || !file) return;
 
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
@@ -1767,4 +1765,3 @@ service firebase.storage {
     </script>
 </body>
 </html>
-
