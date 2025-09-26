@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- INÍCIO DA CORREÇÃO FINAL: Regra de segurança mais permissiva para imagens e vídeos -->
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
-    <!-- FIM DA CORREÇÃO FINAL -->
     <title>Planear o Taekwondo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -260,6 +258,11 @@ service firebase.storage {
     match /artifacts/{appId}/users/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    // Adicione esta regra para ficheiros públicos de exercícios
+    match /public_exercises_media/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
   }
 }</code></pre>
                 </div>
@@ -276,15 +279,14 @@ service firebase.storage {
         <p class="text-white text-xl animate-pulse">A carregar aplicação...</p>
     </div>
     
+    <!-- PDF Export Container -->
+    <div id="pdf-export-container" class="hidden"></div>
+    
     <script type="module">
-        console.log("DEBUG: O script começou a ser executado.");
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-
-        console.log("DEBUG: Firebase SDKs importados.");
 
         // --- GLOBAL STATE & CONFIG ---
         const appId = 'taekwondo-planner-public';
@@ -299,7 +301,6 @@ service firebase.storage {
             appId: "1:545125407318:web:a8064dc609c5792564b9f7",
             measurementId: "G-Z9QR3EM3XG"
         };
-        console.log("DEBUG: Configuração do Firebase carregada:", firebaseConfig.projectId);
         
         let db, auth, storage;
         let userId = null;
@@ -368,11 +369,9 @@ service firebase.storage {
         // --- FIREBASE & APP INITIALIZATION ---
         if (firebaseConfig && firebaseConfig.apiKey) {
             try {
-                console.log("DEBUG: A inicializar Firebase...");
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                console.log("DEBUG: Firebase inicializado. A aguardar estado de autenticação...");
 
                 if (firebaseConfig.storageBucket) {
                     storage = getStorage(app);
@@ -382,13 +381,10 @@ service firebase.storage {
                 }
 
                 onAuthStateChanged(auth, user => {
-                    console.log("DEBUG: onAuthStateChanged ativado.");
                     if (user) {
-                        console.log("DEBUG: Utilizador encontrado (anónimo ou logado):", user.uid);
                         userId = user.uid;
                         initApp();
                     } else {
-                        console.log("DEBUG: Nenhum utilizador encontrado. A tentar login anónimo...");
                         signInAnonymously(auth).catch(err => {
                             console.error("Anonymous Sign In Error:", err);
                             document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-center text-lg p-4">Falha na autenticação. Verifique se ativou o login anónimo e se autorizou o domínio na consola Firebase.</p>`;
@@ -404,7 +400,6 @@ service firebase.storage {
         }
         
         function initApp() {
-            console.log("DEBUG: A iniciar a aplicação (initApp)...");
             document.getElementById('user-id-display').innerText = userId;
             if (isInitialLoad) {
                 setupEventListeners();
@@ -421,13 +416,11 @@ service firebase.storage {
         }
         
         function finishInitialLoad() {
-            console.log("DEBUG: A finalizar o carregamento inicial (finishInitialLoad)...");
             if (isInitialLoad) {
                 showView('training-plans-list-view');
                 document.getElementById('app').style.display = 'block';
                 document.getElementById('loading-overlay').style.display = 'none';
                 isInitialLoad = false;
-                console.log("DEBUG: Overlay de carregamento removido. A aplicação deve estar visível.");
             }
         }
 
@@ -488,15 +481,14 @@ service firebase.storage {
                 allTrainingPlans.sort((a, b) => (b.header?.Data || '').localeCompare(a.header?.Data || ''));
                 
                 container.innerHTML = allTrainingPlans.map(plan => `
-                    <div class="glass-effect rounded-lg p-4 flex justify-between items-center">
+                    <div onclick="window.editTrainingPlan('${plan.id}')" class="glass-effect rounded-lg p-4 flex justify-between items-center cursor-pointer hover:border-indigo-500 border border-transparent transition">
                         <div>
                             <h3 class="font-bold text-lg text-white">Plano Nº ${plan.header?.['Plano.Nº'] || 'N/A'} - ${plan.header?.Data || 'Sem data'}</h3>
                             <p class="text-sm text-gray-400">${plan.header?.['Objectivo Geral'] || 'Sem objectivo'}</p>
                         </div>
                         <div class="flex space-x-2">
-                            <button onclick="window.duplicateTrainingPlan('${plan.id}')" class="btn btn-teal text-sm">Duplicar</button>
-                            <button onclick="window.editTrainingPlan('${plan.id}')" class="btn btn-secondary text-sm">Editar</button>
-                            <button onclick="window.confirmDelete('plan', '${plan.id}')" class="btn btn-danger text-sm">Apagar</button>
+                            <button onclick="event.stopPropagation(); window.duplicateTrainingPlan('${plan.id}')" class="btn btn-teal text-sm">Duplicar</button>
+                            <button onclick="event.stopPropagation(); window.confirmDelete('plan', '${plan.id}')" class="btn btn-danger text-sm">Apagar</button>
                         </div>
                     </div>
                 `).join('');
@@ -508,9 +500,9 @@ service firebase.storage {
             document.getElementById('editor-title').innerText = 'Novo Plano de Treino';
             currentTrainingPlan = { 
                 header: {}, 
-                parteInicial: [{ id: Date.now() + 1 }], 
-                partePrincipal: [{ id: Date.now() + 2 }], 
-                parteFinal: [{ id: Date.now() + 3 }] 
+                parteInicial: [], 
+                partePrincipal: [], 
+                parteFinal: []
             };
             planMetadataFields.forEach(f => {
                 currentTrainingPlan.header[f.id] = f.type === 'date' ? new Date().toISOString().split('T')[0] : '';
@@ -597,7 +589,10 @@ service firebase.storage {
                         intensidade: ex.intensidade || '',
                         tempo: ex.tempo || '',
                         createdBy: userId,
-                        createdAt: serverTimestamp()
+                        createdAt: serverTimestamp(),
+                        mediaUrl: ex.mediaUrl || '',
+                        filePath: ex.filePath || '',
+                        mediaType: ex.mediaType || ''
                     };
                     
                     newExercisesToSave.push(newLibraryExercise);
@@ -752,7 +747,7 @@ service firebase.storage {
                             }
                             fileUploadInput = `<input type="file" class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleFileUpload('${section.id}', ${index}, this.files[0])">`;
                         }
-                        const hasMedia = !!ex.mediaUrl;
+                        const hasMedia = !!ex.mediaUrl || !!ex.localMediaUrl;
                         const mediaPreviewContainer = `<div id="media-preview-${section.id}-${index}" class="mt-2">${mediaPreview}</div>`;
                         return `
                         <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 relative">
@@ -820,49 +815,36 @@ service firebase.storage {
 
         // --- FILE HANDLING ---
         window.handleFileUpload = async (sectionId, index, file) => {
-            if (!storageEnabled || !userId || !file) {
-                if (!storageEnabled) showToast("O armazenamento de ficheiros não está configurado.", true);
-                return;
-            }
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'];
-            if (!allowedTypes.includes(file.type)) {
-                showToast("Tipo de ficheiro não suportado.", true); return;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                showToast("O ficheiro é demasiado grande (Máx: 10MB).", true); return;
-            }
-            const previewId = `media-preview-${sectionId}-${index}`;
-            const previewContainer = document.getElementById(previewId);
-            if (!previewContainer) {
-                console.error("Contentor de pré-visualização não encontrado:", previewId);
-                showToast("Erro: Não foi possível encontrar a área de pré-visualização.", true);
-                return;
-            }
+            const exercise = currentTrainingPlan[sectionId]?.[index];
+            if (!exercise) return;
+            
+            // Lógica de pré-visualização
             const localUrl = URL.createObjectURL(file);
-            let previewHtml = '';
-            if (file.type.startsWith('image/')) {
-                previewHtml = `<img src="${localUrl}" class="rounded-md max-h-40 w-auto">`;
-            } else if (file.type.startsWith('video/')) {
-                previewHtml = `<video src="${localUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
-            }
-            previewContainer.innerHTML = previewHtml;
-            previewContainer.previousElementSibling.style.display = 'none'; // Esconde a textarea
+            exercise.localMediaUrl = localUrl;
+            exercise.localMediaType = file.type;
+            renderTrainingPlanExercises(); // Re-render para mostrar a preview e esconder a textarea
+
+            // Lógica de upload
+            if (!storageEnabled || !userId || !file) return;
 
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
-            const exercise = currentTrainingPlan[sectionId]?.[index];
-            if (exercise && exercise.filePath) {
+            if (exercise.filePath) {
                 await deleteFile(exercise.filePath).catch(err => console.warn("Não foi possível apagar ficheiro antigo", err));
             }
+
             const filePath = `artifacts/${appId}/users/${userId}/schemes/${Date.now()}-${file.name}`;
             const fileRef = ref(storage, filePath);
             try {
                 const snapshot = await uploadBytes(fileRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
+                
+                // Limpa os dados de preview local e guarda os dados finais
+                delete exercise.localMediaUrl;
+                delete exercise.localMediaType;
                 updateExerciseInPlan(sectionId, index, 'mediaUrl', downloadURL);
                 updateExerciseInPlan(sectionId, index, 'filePath', filePath);
                 updateExerciseInPlan(sectionId, index, 'mediaType', file.type);
-                const previewElement = previewContainer.querySelector('img, video');
-                if (previewElement) previewElement.src = downloadURL;
+                
                 showToast("Ficheiro enviado com sucesso!", false, false, toastId);
             } catch (error) {
                 console.error("Erro no envio do ficheiro:", error);
@@ -872,7 +854,6 @@ service firebase.storage {
                     showFirebaseRulesModal();
                 }
                 showToast(errorMessage, true, false, toastId);
-                previewContainer.innerHTML = `<p class="text-xs text-red-400">Falha no envio.</p>`;
             }
         };
 
@@ -944,7 +925,6 @@ service firebase.storage {
 
         function listenForExercises() {
             if (!userId) return;
-            // UPDATED: Listen to the public collection
             const q = query(collection(db, `public_exercises`));
             onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('exercise-list-container');
@@ -963,17 +943,26 @@ service firebase.storage {
                           return `<div class="text-center"><strong>${f.label.slice(0,4)}:</strong><br>${value}</div>`
                     }).join('');
                     
-                    // Show Edit/Delete buttons only if the user is the creator
                     const actionButtons = exercise.createdBy === userId ? `
                         <button onclick="window.showExerciseEditor('${exercise.id}')" class="btn btn-secondary text-sm">Editar</button>
                         <button onclick="window.confirmDelete('exercise', '${exercise.id}')" class="btn btn-danger text-sm">Apagar</button>
                     ` : '';
+                    
+                    let mediaDisplay = '';
+                    if (exercise.mediaUrl) {
+                        if (exercise.mediaType?.startsWith('image/')) {
+                            mediaDisplay = `<img src="${exercise.mediaUrl}" class="rounded-md mt-2 max-h-40 w-auto mx-auto">`;
+                        } else if (exercise.mediaType?.startsWith('video/')) {
+                            mediaDisplay = `<video src="${exercise.mediaUrl}" controls class="rounded-md mt-2 max-h-40 w-auto mx-auto"></video>`;
+                        }
+                    }
 
                     return `
                         <div class="glass-effect rounded-lg p-4 flex flex-col justify-between">
                             <div>
                                 <h4 class="font-bold text-lg text-white">${exercise.name}</h4>
                                 <p class="text-sm text-gray-400 mt-1 mb-2">${exercise.description || ''}</p>
+                                ${mediaDisplay}
                                 <div class="mt-2 pt-2 border-t border-gray-700 text-xs grid grid-cols-6 gap-1">${loadParams}</div>
                             </div>
                             <div class="flex space-x-2 mt-4 self-end">
@@ -1000,9 +989,7 @@ service firebase.storage {
             }
             
             try {
-                // UPDATED: Ensure createdBy is set
                 exerciseData.createdBy = userId; 
-                // UPDATED: Save to the public collection
                 await setDoc(doc(db, `public_exercises`, currentEditingExerciseId), exerciseData, { merge: true });
                 showToast("Exercício guardado na biblioteca partilhada!");
                 showView('exercise-library-view');
@@ -1013,7 +1000,6 @@ service firebase.storage {
 
         window.cancelExerciseEdit = async () => {
             try {
-                // UPDATED: Path to public collection
                 const docRef = doc(db, `public_exercises`, currentEditingExerciseId);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists() && docSnap.data().name === "Novo Exercício...") {
@@ -1028,11 +1014,9 @@ service firebase.storage {
         window.deleteExercise = async (exerciseId, suppressToast = false) => {
              if (!userId) return;
             try {
-                // UPDATED: Path to public collection
                 const docRef = doc(db, `public_exercises`, exerciseId);
                 const docSnap = await getDoc(docRef);
 
-                // Security check on client-side for better UX
                 if (docSnap.exists() && docSnap.data().createdBy !== userId) {
                     showToast("Não pode apagar um exercício que não criou.", true);
                     return;
@@ -1610,6 +1594,9 @@ service firebase.storage {
                         pausa: exerciseData.pausa || '',
                         intensidade: exerciseData.intensidade || '',
                         tempo: exerciseData.tempo || '',
+                        mediaUrl: exerciseData.mediaUrl || '',
+                        filePath: exerciseData.filePath || '',
+                        mediaType: exerciseData.mediaType || ''
                     };
 
                     if (!currentTrainingPlan[currentSectionIdForAddingExercise]) {
@@ -1684,35 +1671,83 @@ service firebase.storage {
             document.getElementById('confirmation-modal').classList.remove('flex');
             confirmAction = () => {};
         }
-
+        
+        // --- FUNÇÃO DE EXPORTAÇÃO DE PDF MELHORADA ---
         window.exportPlanToPDF = () => {
-            if (!currentTrainingPlan || !currentTrainingPlan.header) {
-                showToast("Não há plano para exportar.", true);
-                return;
-            }
-            const planTitle = `Plano_${currentTrainingPlan.header['Plano.Nº'] || 'SN'}_${currentTrainingPlan.header['Data'] || 'SD'}.pdf`;
-            const element = document.getElementById('training-plan-editor-view');
-            
             const toastId = showToast("A gerar PDF...", false, true);
 
-            const buttons = element.querySelector('.flex.flex-wrap.gap-4.justify-end');
-            buttons.style.display = 'none';
+            // 1. Criar o HTML para impressão
+            const plan = currentTrainingPlan;
+            let printableHtml = `
+                <style>
+                    body { font-family: 'Inter', sans-serif; color: #333; }
+                    .header-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; border-bottom: 2px solid #ccc; padding-bottom: 1rem; margin-bottom: 1rem; }
+                    .header-item { font-size: 12px; }
+                    .header-item strong { display: block; color: #555; }
+                    .section { margin-top: 1.5rem; }
+                    .section h2 { font-size: 1.5rem; color: #111; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+                    .exercise { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+                    .exercise-title { font-size: 1.1rem; font-weight: bold; }
+                    .exercise-details { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin: 0.5rem 0; font-size: 11px; text-align: center;}
+                    .exercise-text { font-size: 12px; white-space: pre-wrap; word-wrap: break-word; }
+                    .exercise-media { max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 0.5rem; }
+                </style>
+                <h1>Plano de Treino Nº ${plan.header['Plano.Nº'] || ''} - ${plan.header.Data || ''}</h1>
+                <div class="header-grid">
+            `;
+            planMetadataFields.forEach(field => {
+                if (field.type !== 'textarea') {
+                    printableHtml += `<div class="header-item"><strong>${field.label}:</strong> ${plan.header[field.id] || '-'}</div>`;
+                }
+            });
+            printableHtml += `</div>`;
+            planMetadataFields.forEach(field => {
+                 if (field.type === 'textarea') {
+                    printableHtml += `<div class="header-item"><strong>${field.label}:</strong><div class="exercise-text">${plan.header[field.id] || '-'}</div></div>`;
+                }
+            });
+
+            trainingSections.forEach(section => {
+                printableHtml += `<div class="section"><h2>${section.title}</h2>`;
+                (plan[section.id] || []).forEach(ex => {
+                    printableHtml += `
+                        <div class="exercise">
+                            <div class="exercise-title">${ex.descricao || 'Exercício sem nome'}</div>
+                            <div class="exercise-details">
+                                <div><strong>Repetições:</strong> ${ex.repeticoes || '-'}</div>
+                                <div><strong>Séries:</strong> ${ex.series || '-'}</div>
+                                <div><strong>Pausa:</strong> ${ex.pausa || '-'}</div>
+                                <div><strong>Intensidade:</strong> ${ex.intensidade || '-'}</div>
+                                <div><strong>Tempo:</strong> ${ex.tempo || '-'} min</div>
+                            </div>
+                            <div><strong>Organização:</strong> <div class="exercise-text">${ex.organizacao || '-'}</div></div>`;
+                    if (ex.mediaUrl) {
+                        printableHtml += `<img src="${ex.mediaUrl}" class="exercise-media">`;
+                    }
+                    printableHtml += `<div><strong>Critérios de Êxito:</strong> <div class="exercise-text">${ex.criteriosExito || '-'}</div></div>`;
+                    printableHtml += `</div>`;
+                });
+                printableHtml += `</div>`;
+            });
+
+            // 2. Usar o HTML gerado para criar o PDF
+            const element = document.createElement('div');
+            element.innerHTML = printableHtml;
 
             html2pdf().from(element).set({
                 margin: 0.5,
-                filename: planTitle,
+                filename: `Plano_${plan.header['Plano.Nº'] || 'SN'}_${plan.header['Data'] || 'SD'}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             }).save().then(() => {
                 showToast("PDF gerado com sucesso!", false, false, toastId);
-                buttons.style.display = 'flex';
             }).catch(err => {
                 showToast("Erro ao gerar PDF.", true, false, toastId);
-                buttons.style.display = 'flex';
-                console.error(err);
+                console.error("Erro no PDF:", err);
             });
         };
     </script>
 </body>
 </html>
+
