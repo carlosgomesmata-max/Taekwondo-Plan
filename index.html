@@ -620,6 +620,13 @@ service firebase.storage {
                 await saveExercisesFromPlanToLibrary(currentTrainingPlan);
 
                 const planToSave = JSON.parse(JSON.stringify(currentTrainingPlan));
+                 // Remove temporary local properties before saving
+                trainingSections.forEach(section => {
+                    (planToSave[section.id] || []).forEach(ex => {
+                        delete ex.localMediaUrl;
+                        delete ex.localMediaType;
+                    });
+                });
 
                 if (currentEditingPlanId) {
                     await setDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, currentEditingPlanId), planToSave, { merge: true });
@@ -737,17 +744,21 @@ service firebase.storage {
                         const tipoOptions = exerciseTypeCategories.map(cat => `<option value="${cat}" ${ex.tipo === cat ? 'selected' : ''}>${cat}</option>`).join('');
                         let fileUploadInput = '';
                         let mediaPreview = '';
+                        
+                        const mediaUrlToShow = ex.localMediaUrl || ex.mediaUrl;
+                        const mediaTypeToShow = ex.localMediaType || ex.mediaType;
+
                         if (storageEnabled) {
-                            if (ex.mediaUrl) {
-                                if (ex.mediaType?.startsWith('image/')) {
-                                    mediaPreview = `<img src="${ex.mediaUrl}" class="rounded-md max-h-40 w-auto">`;
-                                } else if (ex.mediaType?.startsWith('video/')) {
-                                    mediaPreview = `<video src="${ex.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
+                            if (mediaUrlToShow) {
+                                if (mediaTypeToShow?.startsWith('image/')) {
+                                    mediaPreview = `<img src="${mediaUrlToShow}" class="rounded-md max-h-40 w-auto">`;
+                                } else if (mediaTypeToShow?.startsWith('video/')) {
+                                    mediaPreview = `<video src="${mediaUrlToShow}" controls class="rounded-md max-h-40 w-auto"></video>`;
                                 }
                             }
                             fileUploadInput = `<input type="file" class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleFileUpload('${section.id}', ${index}, this.files[0])">`;
                         }
-                        const hasMedia = !!ex.mediaUrl || !!ex.localMediaUrl;
+                        const hasMedia = !!mediaUrlToShow;
                         const mediaPreviewContainer = `<div id="media-preview-${section.id}-${index}" class="mt-2">${mediaPreview}</div>`;
                         return `
                         <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 relative">
@@ -822,7 +833,7 @@ service firebase.storage {
             const localUrl = URL.createObjectURL(file);
             exercise.localMediaUrl = localUrl;
             exercise.localMediaType = file.type;
-            renderTrainingPlanExercises(); // Re-render para mostrar a preview e esconder a textarea
+            renderTrainingPlanExercises(); 
 
             // Lógica de upload
             if (!storageEnabled || !userId || !file) return;
@@ -838,9 +849,6 @@ service firebase.storage {
                 const snapshot = await uploadBytes(fileRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
                 
-                // Limpa os dados de preview local e guarda os dados finais
-                delete exercise.localMediaUrl;
-                delete exercise.localMediaType;
                 updateExerciseInPlan(sectionId, index, 'mediaUrl', downloadURL);
                 updateExerciseInPlan(sectionId, index, 'filePath', filePath);
                 updateExerciseInPlan(sectionId, index, 'mediaType', file.type);
@@ -1750,4 +1758,3 @@ service firebase.storage {
     </script>
 </body>
 </html>
-
