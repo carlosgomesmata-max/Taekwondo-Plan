@@ -60,6 +60,15 @@
             border-radius: 50%;
             border: 1px solid #1f2937; /* gray-800 */
         }
+        #toast-container {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -273,7 +282,7 @@ service firebase.storage {
             </div>
         </div>
 
-        <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+        <div id="toast-container"></div>
     </div>
     <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50">
         <p class="text-white text-xl animate-pulse">A carregar aplicação...</p>
@@ -969,9 +978,9 @@ service firebase.storage {
                         <div class="glass-effect rounded-lg p-4 flex flex-col justify-between">
                             <div>
                                 <h4 class="font-bold text-lg text-white">${exercise.name}</h4>
-                                <p class="text-sm text-gray-400 mt-1 mb-2">${exercise.description || ''}</p>
+                                <p class="text-sm text-gray-400 mt-1 mb-2">${(exercise.description || '').substring(0, 80)}...</p>
                                 ${mediaDisplay}
-                                <div class="mt-2 pt-2 border-t border-gray-700 text-xs grid grid-cols-6 gap-1">${loadParams}</div>
+                                <div class="mt-2 pt-2 border-t border-gray-700 text-xs flex flex-wrap gap-2 justify-center">${loadParams}</div>
                             </div>
                             <div class="flex space-x-2 mt-4 self-end">
                                 ${actionButtons}
@@ -1758,3 +1767,4 @@ service firebase.storage {
     </script>
 </body>
 </html>
+
