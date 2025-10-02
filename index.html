@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
@@ -158,7 +158,7 @@
 
             <!-- Exercise Editor View -->
             <div id="exercise-editor-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-                <h3 class="text-3xl font-bold text-white mb-6" id="exercise-editor-title">Novo Exercício</h3>
+                <h3 class="text-3xl font-bold text-white mb-6" id="exercise-editor-title" style="display: none;"></h3>
                 <form id="exercise-form" class="space-y-4"></form>
                 <div id="exercise-editor-footer" class="mt-8 flex flex-wrap gap-4 justify-end">
                     <!-- Buttons will be rendered here by JS -->
@@ -483,7 +483,8 @@ service firebase.storage {
             onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('plans-list-container');
                 if (snapshot.empty) {
-                    container.innerHTML = '<p class="text-center text-gray-500">Ainda não criou nenhum plano.</p>';
+                    container.innerHTML = '<p class="text-center text-gray-500">Ainda não criou nenhum plano. A criar um plano de exemplo...</p>';
+                    seedInitialDataIfNeeded(); // CORREÇÃO: Chama a função para criar um plano de exemplo se não houver nenhum
                     return;
                 }
                 allTrainingPlans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -502,6 +503,23 @@ service firebase.storage {
                     </div>
                 `).join('');
             }, (error) => console.error("Error listening for plans:", error));
+        }
+        
+        async function seedInitialDataIfNeeded() {
+            const today = new Date().toISOString().split('T')[0];
+            const examplePlan = {
+                header: { "Treinador": "Carlos Mata", "Local": "Dojang Principal", "Data": today, "Plano.Nº": "1", "Periodo": "Preparatório", "Mesociclo": "Base", "Microciclo": "Carga (CA)", "Intensidade": "Média 70 a 85%", "Volume": "90", "Conteúdo": "Técnica", "Objectivo Geral": "Melhorar a execução dos pontapés básicos.", "Objectivo Especifico": "Foco na elevação do joelho e rotação da anca.", "Material": "Escudos de pontapé", "Equipa": "Iniciação" },
+                parteInicial: [{ id: Date.now()+1, descricao: "Aquecimento articular geral.", organizacao: "Em círculo, liderado pelo treinador.", tempo: "5", criteriosExito: "Execução completa e controlada dos movimentos.", tipo: "Capacidades Físicas" }],
+                partePrincipal: [{ id: Date.now()+2, descricao: "Ap Chagi (Pontapé Frontal) em avanço.", organizacao: "Em 4 linhas, atravessando o Dojang.", tempo: "15", criteriosExito: "Elevação do joelho acima da cintura.", tipo: "Conteúdos Técnico Táticos" }],
+                parteFinal: [{ id: Date.now()+3, descricao: "Alongamentos estáticos.", organizacao: "Individual, em silêncio.", tempo: "10", criteriosExito: "Manter cada posição por 30 segundos.", tipo: "Capacidades Físicas" }],
+                createdAt: serverTimestamp()
+            };
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/training_plans`), examplePlan);
+                showToast("Plano de exemplo criado!");
+            } catch (error) {
+                console.error("Erro ao criar plano de exemplo: ", error);
+            }
         }
         
         window.createNewTrainingPlan = () => {
@@ -978,7 +996,9 @@ service firebase.storage {
 
                         html += `
                             <div class="flex items-center justify-between gap-2 bg-gray-800/50 rounded-md p-2">
-                               <span class="flex-grow text-sm truncate pr-2">${ex.name}</span>
+                               <button onclick="window.showExerciseEditor('${ex.id}')" class="flex-grow text-left text-sm truncate pr-2 hover:text-indigo-400 transition">
+                                   ${ex.name}
+                               </button>
                                <div class="flex-shrink-0 flex items-center gap-2">
                          `;
                          if (ex.createdBy === userId) {
@@ -1161,6 +1181,7 @@ service firebase.storage {
             populateExerciseForm(); 
             const form = document.getElementById('exercise-form');
             const footer = document.getElementById('exercise-editor-footer');
+            document.getElementById('exercise-editor-title').style.display = 'none';
 
             if (!exerciseId) {
                 showToast("ID de exercício inválido.", true);
@@ -1175,8 +1196,14 @@ service firebase.storage {
                     const isOwner = data.createdBy === userId;
 
                     currentExerciseData = data;
-                    const title = data.name === "Novo Exercício..." ? "Novo Exercício" : data.name;
-                    document.getElementById('exercise-editor-title').innerText = title;
+                    
+                    if (data.name !== "Novo Exercício...") {
+                         document.getElementById('exercise-editor-title').innerText = data.name;
+                         document.getElementById('exercise-editor-title').style.display = 'block';
+                    } else {
+                         document.getElementById('exercise-editor-title').innerText = "Novo Exercício";
+                         document.getElementById('exercise-editor-title').style.display = 'block';
+                    }
 
                     // Populate form fields with data
                     const allFields = [...exerciseFields, {id: 'tipo'}, ...staticExerciseLoadFields];
