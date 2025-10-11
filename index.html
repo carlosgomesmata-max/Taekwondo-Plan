@@ -46,7 +46,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            font-size: 0.65rem; /* Reduzi o tamanho da letra para tornar o botão mais pequeno */
+            font-size: 0.65rem; 
             line-height: 1;
         }
         .session-square.logged::after {
@@ -94,6 +94,7 @@
                             <a href="#" id="nav-novo-plano" onclick="window.createNewTrainingPlan()" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Novo Plano</a>
                             <a href="#" id="nav-novo-exercicio" onclick="window.createNewExercise()" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Novo Exercício</a>
                             <a href="#" id="nav-biblioteca" onclick="window.showView('exercise-library-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Biblioteca Partilhada</a>
+                            <a href="#" id="nav-galeria" onclick="window.showView('image-gallery-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Galeria de Imagens</a>
                             <a href="#" id="nav-mapa" onclick="window.showView('content-map-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Mapa de Conteúdos</a>
                         </div>
                     </div>
@@ -115,6 +116,7 @@
                     <a href="#" onclick="window.createNewTrainingPlan(); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Novo Plano</a>
                     <a href="#" onclick="window.createNewExercise(); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Novo Exercício</a>
                     <a href="#" onclick="window.showView('exercise-library-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Biblioteca Partilhada</a>
+                    <a href="#" onclick="window.showView('image-gallery-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Galeria de Imagens</a>
                     <a href="#" onclick="window.showView('content-map-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Mapa de Conteúdos</a>
                 </div>
             </div>
@@ -142,7 +144,7 @@
                      </div>
                     <button onclick="window.showView('training-plans-list-view')" class="btn btn-secondary">Cancelar</button>
                     <button onclick="window.exportPlanToPDF()" class="btn btn-teal">Exportar PDF</button>
-                    <button onclick="window.saveTrainingPlan()" class="btn btn-primary">Guardar Plano</button>
+                    <button id="save-plan-btn" onclick="window.saveTrainingPlan()" class="btn btn-primary">Guardar Plano</button>
                 </div>
             </div>
             
@@ -161,6 +163,18 @@
                 <div id="exercise-editor-footer" class="mt-8 flex flex-wrap gap-4 justify-end">
                     <!-- Buttons will be rendered here by JS -->
                 </div>
+            </div>
+            
+            <!-- Image Gallery View -->
+            <div id="image-gallery-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-white">Galeria de Imagens</h2>
+                    <label for="gallery-upload-input" class="btn btn-primary">
+                        Carregar Nova Imagem
+                        <input type="file" id="gallery-upload-input" class="hidden" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleGalleryUpload(this.files[0])">
+                    </label>
+                </div>
+                <div id="image-gallery-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
 
              <!-- Content Map View -->
@@ -203,6 +217,18 @@
         </main>
         
         <!-- Modals -->
+        <div id="image-gallery-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+            <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl transform transition-all">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-medium text-white">Selecionar Imagem da Galeria</h3>
+                    <button onclick="window.hideImageGalleryModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                </div>
+                <div id="image-gallery-modal-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 overflow-y-auto max-h-[60vh]">
+                   <!-- Images for selection will be loaded here -->
+                </div>
+            </div>
+        </div>
+        
         <div id="content-log-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
             <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl transform transition-all">
                 <div class="flex justify-between items-center mb-4">
@@ -315,6 +341,7 @@ service firebase.storage {
         let currentEditingPlanId = null;
         let currentEditingExerciseId = null;
         let currentSectionIdForAddingExercise = null;
+        let currentPlanExerciseIndex = null;
         let confirmAction = () => {};
         let currentTrainingPlan = {};
         let allTrainingPlans = [];
@@ -324,7 +351,6 @@ service firebase.storage {
         let numberOfSessions = 140;
         let isInitialLoad = true;
         let currentExerciseData = {};
-        let activeUploads = 0; // CORREÇÃO: Contador de uploads ativos
 
         const intensityOptions = ["Fraca - 50%", "Baixa - 70%", "Média 70 a 85%", "Alta 85 a 95%", "Extrema 95 a 100%"];
 
@@ -421,6 +447,7 @@ service firebase.storage {
             listenForExercises();
             listenForTrainingPlans();
             listenForContentLog();
+            listenForGalleryImages();
         }
         
         function finishInitialLoad() {
@@ -468,6 +495,7 @@ service firebase.storage {
             else if (viewId === 'exercise-editor-view') {
                 activeButton = document.getElementById(currentEditingExerciseId ? 'nav-biblioteca' : 'nav-novo-exercicio');
             }
+             else if (viewId === 'image-gallery-view') activeButton = document.getElementById('nav-galeria');
              else if (viewId === 'content-map-view') {
                  activeButton = document.getElementById('nav-mapa');
                  renderContentGrid();
@@ -773,24 +801,16 @@ service firebase.storage {
                         const centeredInputClasses = `${baseInputClasses} text-center`;
                         const labelClasses = "block text-sm font-medium text-gray-400 mb-1";
                         const tipoOptions = exerciseTypeCategories.map(cat => `<option value="${cat}" ${ex.tipo === cat ? 'selected' : ''}>${cat}</option>`).join('');
-                        let fileUploadInput = '';
                         let mediaPreview = '';
                         
-                        const mediaUrlToShow = ex.localMediaUrl || ex.mediaUrl;
-                        const mediaTypeToShow = ex.localMediaType || ex.mediaType;
-
-                        if (storageEnabled) {
-                            if (mediaUrlToShow) {
-                                if (mediaTypeToShow?.startsWith('image/')) {
-                                    mediaPreview = `<img src="${mediaUrlToShow}" class="rounded-md max-h-40 w-auto">`;
-                                } else if (mediaTypeToShow?.startsWith('video/')) {
-                                    mediaPreview = `<video src="${mediaUrlToShow}" controls class="rounded-md max-h-40 w-auto"></video>`;
-                                }
+                        if (ex.mediaUrl) {
+                            if (ex.mediaType?.startsWith('image/')) {
+                                mediaPreview = `<img src="${ex.mediaUrl}" class="rounded-md max-h-40 w-auto">`;
+                            } else if (ex.mediaType?.startsWith('video/')) {
+                                mediaPreview = `<video src="${ex.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
                             }
-                            fileUploadInput = `<input type="file" class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleFileUpload('${section.id}', ${index}, this.files[0])">`;
                         }
-                        const hasMedia = !!mediaUrlToShow;
-                        const mediaPreviewContainer = `<div id="media-preview-${section.id}-${index}" class="mt-2">${mediaPreview}</div>`;
+
                         return `
                         <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 relative">
                             <button onclick="window.removeExerciseFromPlan('${section.id}', ${index})" class="absolute top-2 right-2 text-red-400 hover:text-red-300 text-2xl leading-none z-10">&times;</button>
@@ -810,11 +830,11 @@ service firebase.storage {
                                 <div class="md:col-span-2">
                                     <div class="flex justify-between items-center mb-1">
                                         <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
-                                        ${fileUploadInput}
+                                        <button onclick="window.showImageGalleryModal('${section.id}', ${index})" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Adicionar da Galeria</button>
                                     </div>
                                     <div class="bg-gray-700 border border-gray-600 rounded-md p-2">
-                                        <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'organizacao', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4" style="display: ${hasMedia ? 'none' : 'block'};">${ex.organizacao || ''}</textarea>
-                                        ${mediaPreviewContainer}
+                                        <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'organizacao', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4" style="display: ${ex.mediaUrl ? 'none' : 'block'};">${ex.organizacao || ''}</textarea>
+                                        <div class="mt-2">${mediaPreview}</div>
                                     </div>
                                 </div>
                                 <div class="md:col-span-1">
@@ -845,56 +865,132 @@ service firebase.storage {
         };
         
         window.removeExerciseFromPlan = async (sectionId, index) => {
-            if (storageEnabled) {
-                const exercise = currentTrainingPlan[sectionId]?.[index];
-                if (exercise && exercise.filePath) {
-                    await deleteFile(exercise.filePath);
-                }
-            }
             currentTrainingPlan[sectionId]?.splice(index, 1);
             renderTrainingPlanExercises();
         };
 
-        // --- FILE HANDLING ---
-        window.handleFileUpload = async (sectionId, index, file) => {
-            const exercise = currentTrainingPlan[sectionId]?.[index];
-            if (!exercise) return;
-            
-            const localUrl = URL.createObjectURL(file);
-            exercise.localMediaUrl = localUrl;
-            exercise.localMediaType = file.type;
-            renderTrainingPlanExercises(); 
+        // --- FILE HANDLING & IMAGE GALLERY ---
+        
+        function listenForGalleryImages() {
+            if (!userId) return;
+            const q = query(collection(db, `artifacts/${appId}/users/${userId}/gallery`));
+            onSnapshot(q, (snapshot) => {
+                const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderImageGallery(images);
+                renderImageGalleryModal(images);
+            });
+        }
+        
+        function renderImageGallery(images) {
+            const container = document.getElementById('image-gallery-container');
+            if (!container) return;
+            if (images.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500">A sua galeria está vazia.</p>`;
+                return;
+            }
+            container.innerHTML = images.map(img => `
+                <div class="relative group">
+                    <img src="${img.url}" class="w-full h-24 object-cover rounded-md">
+                    <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="window.copyToClipboard('${img.url}')" class="btn btn-secondary btn-sm text-xs mb-1">Copiar URL</button>
+                        <button onclick="window.confirmDelete('galleryImage', '${img.id}')" class="btn btn-danger btn-sm text-xs">Apagar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderImageGalleryModal(images) {
+            const container = document.getElementById('image-gallery-modal-container');
+             if (!container) return;
+            if (images.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500">A sua galeria está vazia. Carregue imagens no separador 'Galeria de Imagens'.</p>`;
+                return;
+            }
+            container.innerHTML = images.map(img => `
+                <div class="cursor-pointer" onclick="window.selectImageFromGallery('${img.url}', '${img.type}')">
+                    <img src="${img.url}" class="w-full h-24 object-cover rounded-md border-2 border-transparent hover:border-indigo-500 transition">
+                </div>
+            `).join('');
+        }
 
+        window.handleGalleryUpload = async (file) => {
             if (!storageEnabled || !userId || !file) return;
             
-            activeUploads++;
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
-            if (exercise.filePath) {
-                await deleteFile(exercise.filePath).catch(err => console.warn("Não foi possível apagar ficheiro antigo", err));
-            }
-
-            const filePath = `artifacts/${appId}/users/${userId}/schemes/${Date.now()}-${file.name}`;
+            const filePath = `artifacts/${appId}/users/${userId}/gallery/${Date.now()}-${file.name}`;
             const fileRef = ref(storage, filePath);
+            
             try {
                 const snapshot = await uploadBytes(fileRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-                
-                updateExerciseInPlan(sectionId, index, 'mediaUrl', downloadURL);
-                updateExerciseInPlan(sectionId, index, 'filePath', filePath);
-                updateExerciseInPlan(sectionId, index, 'mediaType', file.type);
-                
-                showToast("Ficheiro enviado com sucesso!", false, false, toastId);
+
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/gallery`), {
+                    url: downloadURL,
+                    path: filePath,
+                    type: file.type,
+                    createdAt: serverTimestamp()
+                });
+                showToast("Imagem adicionada à galeria!", false, false, toastId);
             } catch (error) {
-                console.error("Erro no envio do ficheiro:", error);
-                let errorMessage = "Erro ao enviar o ficheiro.";
-                if (error.code === 'storage/unauthorized') {
-                    errorMessage = "Erro de permissão no Firebase Storage.";
-                    showFirebaseRulesModal();
-                }
-                showToast(errorMessage, true, false, toastId);
-            } finally {
-                activeUploads--;
+                 console.error("Erro no envio do ficheiro para a galeria:", error);
+                 showToast("Erro ao enviar o ficheiro.", true, false, toastId);
             }
+        };
+        
+        window.deleteGalleryImage = async (imageId) => {
+            if (!userId || !imageId) return;
+            try {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/gallery`, imageId);
+                const docSnap = await getDoc(docRef);
+                if(docSnap.exists()){
+                    const filePath = docSnap.data().path;
+                    if(filePath) {
+                        const fileRef = ref(storage, filePath);
+                        await deleteObject(fileRef);
+                    }
+                    await deleteDoc(docRef);
+                    showToast("Imagem apagada da galeria.");
+                }
+            } catch(error) {
+                console.error("Erro ao apagar imagem da galeria: ", error);
+                showToast("Erro ao apagar imagem.", true);
+            }
+        };
+
+        window.showImageGalleryModal = (sectionId, index) => {
+            currentSectionIdForAddingExercise = sectionId;
+            currentPlanExerciseIndex = index;
+            document.getElementById('image-gallery-modal').classList.add('flex');
+        };
+
+        window.hideImageGalleryModal = () => {
+            document.getElementById('image-gallery-modal').classList.remove('flex');
+        };
+        
+        window.selectImageFromGallery = (url, type) => {
+            if (currentSectionIdForAddingExercise !== null && currentPlanExerciseIndex !== null) {
+                const exercise = currentTrainingPlan[currentSectionIdForAddingExercise][currentPlanExerciseIndex];
+                if (exercise) {
+                    exercise.mediaUrl = url;
+                    exercise.mediaType = type;
+                    renderTrainingPlanExercises();
+                }
+            } else if (currentEditingExerciseId) {
+                currentExerciseData.mediaUrl = url;
+                currentExerciseData.mediaType = type;
+                showExerciseEditor(currentEditingExerciseId); // Re-render editor with image
+            }
+            hideImageGalleryModal();
+        };
+
+        window.copyToClipboard = (text) => {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast("URL copiado!");
         };
 
         async function deleteFile(filePath) {
@@ -908,7 +1004,7 @@ service firebase.storage {
                 }
             }
         }
-
+        
         function updateCalculatedTotalTime() {
             if (!currentTrainingPlan) return 0;
 
@@ -1241,10 +1337,7 @@ service firebase.storage {
                         mediaContainer.innerHTML = `
                             <div class="flex justify-between items-center w-full">
                                 <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
-                                <input type="file" 
-                                    class="text-xs text-gray-400 w-32 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 cursor-pointer" 
-                                    accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" 
-                                    onchange="window.handleExerciseMediaUpload(this.files[0])">
+                                <button type="button" onclick="window.showImageGalleryModal(null, null, true)" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Adicionar da Galeria</button>
                             </div>
                         `;
                         form.querySelectorAll('input, textarea, select').forEach(el => el.disabled = false);
@@ -1267,60 +1360,6 @@ service firebase.storage {
                 return;
             }
             showView('exercise-editor-view');
-        };
-
-        window.handleExerciseMediaUpload = async (file) => {
-            if (!storageEnabled || !userId || !file || !currentEditingExerciseId) {
-                if (!currentEditingExerciseId) showToast("Guarde o exercício antes de adicionar um ficheiro.", true);
-                return;
-            }
-            const mediaPreview = document.getElementById('ex-media-preview');
-            if (!mediaPreview) {
-                console.error("Contentor de pré-visualização 'ex-media-preview' não encontrado.");
-                return;
-            }
-            mediaPreview.innerHTML = '';
-            const localUrl = URL.createObjectURL(file);
-            if (file.type.startsWith('image/')) {
-                mediaPreview.innerHTML = `<img src="${localUrl}" class="rounded-md max-h-40 w-auto">`;
-            } else if (file.type.startsWith('video/')) {
-                mediaPreview.innerHTML = `<video src="${localUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
-            }
-            document.getElementById('ex-field-organization').style.display = 'none'; // Esconde a textarea
-
-            const toastId = showToast(`A enviar ${file.name}...`, false, true);
-            if (currentExerciseData && currentExerciseData.filePath) {
-                await deleteFile(currentExerciseData.filePath);
-            }
-            // UPDATED: Storage path reflects public nature (optional but good practice)
-            const filePath = `public_exercises_media/${currentEditingExerciseId}/${Date.now()}-${file.name}`;
-            const fileRef = ref(storage, filePath);
-            try {
-                const snapshot = await uploadBytes(fileRef, file);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                const updateData = {
-                    mediaUrl: downloadURL,
-                    filePath: filePath,
-                    mediaType: file.type
-                };
-                // UPDATED: Path to public collection
-                await setDoc(doc(db, `public_exercises`, currentEditingExerciseId), updateData, { merge: true });
-                currentExerciseData = { ...currentExerciseData, ...updateData };
-                const previewElement = mediaPreview.querySelector('img, video');
-                if (previewElement) previewElement.src = downloadURL;
-                showToast("Ficheiro enviado com sucesso!", false, false, toastId);
-            } catch (error) {
-                console.error("Erro no envio do ficheiro:", error);
-                let errorMessage = "Erro ao enviar o ficheiro.";
-                if (error.code === 'storage/unauthorized') {
-                    errorMessage = "Erro de permissão. Verifique as regras de segurança do Firebase Storage.";
-                    showFirebaseRulesModal();
-                } else if (error.code === 'storage/canceled') {
-                    errorMessage = "Envio cancelado.";
-                }
-                showToast(errorMessage, true, false, toastId);
-                mediaPreview.innerHTML = `<p class="text-xs text-red-400">Falha no envio.</p>`;
-            }
         };
         
         // --- CONTENT MAP & CHART LOGIC ---
@@ -1839,3 +1878,4 @@ service firebase.storage {
     </script>
 </body>
 </html>
+
