@@ -157,7 +157,6 @@
 
             <!-- Exercise Editor View -->
             <div id="exercise-editor-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-                <h3 class="text-xl font-bold text-white mb-6" id="exercise-editor-title" style="display: none;"></h3>
                 <form id="exercise-form" class="space-y-4"></form>
                 <div id="exercise-editor-footer" class="mt-8 flex flex-wrap gap-4 justify-end">
                     <!-- Buttons will be rendered here by JS -->
@@ -325,6 +324,7 @@ service firebase.storage {
         let numberOfSessions = 140;
         let isInitialLoad = true;
         let currentExerciseData = {};
+        let activeUploads = 0; // CORREÇÃO: Contador de uploads ativos
 
         const intensityOptions = ["Fraca - 50%", "Baixa - 70%", "Média 70 a 85%", "Alta 85 a 95%", "Extrema 95 a 100%"];
 
@@ -637,6 +637,11 @@ service firebase.storage {
         window.saveTrainingPlan = async () => {
             if (!userId) return;
             
+            if (activeUploads > 0) {
+                showToast("Por favor, aguarde o envio dos ficheiros antes de guardar.", true);
+                return;
+            }
+
             if (!currentTrainingPlan.header['Plano.Nº'] || !currentTrainingPlan.header.Data) {
                 showToast("O Nº do Plano e a Data são obrigatórios.", true);
                 return;
@@ -861,7 +866,8 @@ service firebase.storage {
             renderTrainingPlanExercises(); 
 
             if (!storageEnabled || !userId || !file) return;
-
+            
+            activeUploads++;
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
             if (exercise.filePath) {
                 await deleteFile(exercise.filePath).catch(err => console.warn("Não foi possível apagar ficheiro antigo", err));
@@ -886,6 +892,8 @@ service firebase.storage {
                     showFirebaseRulesModal();
                 }
                 showToast(errorMessage, true, false, toastId);
+            } finally {
+                activeUploads--;
             }
         };
 
@@ -1180,8 +1188,7 @@ service firebase.storage {
             populateExerciseForm(); 
             const form = document.getElementById('exercise-form');
             const footer = document.getElementById('exercise-editor-footer');
-            document.getElementById('exercise-editor-title').style.display = 'none';
-
+            
             if (!exerciseId) {
                 showToast("ID de exercício inválido.", true);
                 showView('exercise-library-view');
@@ -1196,14 +1203,6 @@ service firebase.storage {
 
                     currentExerciseData = data;
                     
-                    if (data.name !== "Novo Exercício...") {
-                         document.getElementById('exercise-editor-title').innerText = data.name;
-                         document.getElementById('exercise-editor-title').style.display = 'block';
-                    } else {
-                         document.getElementById('exercise-editor-title').innerText = "Novo Exercício";
-                         document.getElementById('exercise-editor-title').style.display = 'block';
-                    }
-
                     // Populate form fields with data
                     const allFields = [...exerciseFields, {id: 'tipo'}, ...staticExerciseLoadFields];
                     allFields.forEach(field => {
@@ -1214,6 +1213,7 @@ service firebase.storage {
                     });
                     if (data.name === "Novo Exercício...") {
                         document.getElementById('ex-field-name').value = "";
+                        document.getElementById('ex-field-name').placeholder = "Dê um nome ao exercício";
                     }
 
                     // Handle media preview
