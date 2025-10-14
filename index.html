@@ -30,6 +30,7 @@
         .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; cursor: pointer; }
         .btn-primary { background-color: #4f46e5; color: white; }
         .btn-primary:hover { background-color: #4338ca; }
+        .btn-primary:disabled { background-color: #6b7280; cursor: not-allowed; }
         .btn-secondary { background-color: #4b5563; color: white; }
         .btn-secondary:hover { background-color: #6b7280; }
         .btn-danger { background-color: #dc2626; color: white; }
@@ -351,6 +352,7 @@ service firebase.storage {
         let numberOfSessions = 140;
         let isInitialLoad = true;
         let currentExerciseData = {};
+        let isUploading = false; // Bloqueia o botão Guardar
 
         const intensityOptions = ["Fraca - 50%", "Baixa - 70%", "Média 70 a 85%", "Alta 85 a 95%", "Extrema 95 a 100%"];
 
@@ -511,7 +513,7 @@ service firebase.storage {
                 const container = document.getElementById('plans-list-container');
                 if (snapshot.empty) {
                     container.innerHTML = '<p class="text-center text-gray-500">Ainda não criou nenhum plano. A criar um plano de exemplo...</p>';
-                    seedInitialDataIfNeeded(); // CORREÇÃO: Chama a função para criar um plano de exemplo se não houver nenhum
+                    seedInitialDataIfNeeded();
                     return;
                 }
                 allTrainingPlans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -665,7 +667,7 @@ service firebase.storage {
         window.saveTrainingPlan = async () => {
             if (!userId) return;
             
-            if (activeUploads > 0) {
+            if (isUploading) {
                 showToast("Por favor, aguarde o envio dos ficheiros antes de guardar.", true);
                 return;
             }
@@ -679,14 +681,6 @@ service firebase.storage {
                 await saveExercisesFromPlanToLibrary(currentTrainingPlan);
 
                 const planToSave = JSON.parse(JSON.stringify(currentTrainingPlan));
-                 // Remove temporary local properties before saving
-                trainingSections.forEach(section => {
-                    (planToSave[section.id] || []).forEach(ex => {
-                        delete ex.localMediaUrl;
-                        delete ex.localMediaType;
-                    });
-                });
-
                 if (currentEditingPlanId) {
                     await setDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, currentEditingPlanId), planToSave, { merge: true });
                     showToast("Plano atualizado com sucesso!");
@@ -869,8 +863,7 @@ service firebase.storage {
             renderTrainingPlanExercises();
         };
 
-        // --- FILE HANDLING & IMAGE GALLERY ---
-        
+        // --- IMAGE GALLERY ---
         function listenForGalleryImages() {
             if (!userId) return;
             const q = query(collection(db, `artifacts/${appId}/users/${userId}/gallery`));
@@ -916,6 +909,8 @@ service firebase.storage {
         window.handleGalleryUpload = async (file) => {
             if (!storageEnabled || !userId || !file) return;
             
+            isUploading = true;
+            updateSaveButtonState(true);
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
             const filePath = `artifacts/${appId}/users/${userId}/gallery/${Date.now()}-${file.name}`;
             const fileRef = ref(storage, filePath);
@@ -934,6 +929,9 @@ service firebase.storage {
             } catch (error) {
                  console.error("Erro no envio do ficheiro para a galeria:", error);
                  showToast("Erro ao enviar o ficheiro.", true, false, toastId);
+            } finally {
+                isUploading = false;
+                updateSaveButtonState(false);
             }
         };
         
@@ -957,9 +955,14 @@ service firebase.storage {
             }
         };
 
-        window.showImageGalleryModal = (sectionId, index) => {
-            currentSectionIdForAddingExercise = sectionId;
-            currentPlanExerciseIndex = index;
+        window.showImageGalleryModal = (sectionId, index, forExercise = false) => {
+            if (forExercise) {
+                currentSectionIdForAddingExercise = null;
+                currentPlanExerciseIndex = null;
+            } else {
+                currentSectionIdForAddingExercise = sectionId;
+                currentPlanExerciseIndex = index;
+            }
             document.getElementById('image-gallery-modal').classList.add('flex');
         };
 
@@ -1264,7 +1267,6 @@ service firebase.storage {
                  return;
              }
             try {
-                // UPDATED: Path to public collection and add createdBy
                 const newDocRef = await addDoc(collection(db, `public_exercises`), {
                     name: "Novo Exercício...",
                     createdAt: serverTimestamp(),
@@ -1792,6 +1794,9 @@ service firebase.storage {
                     "Apagar Exercício?",
                     "O exercício será removido da biblioteca partilhada. Apenas o autor o pode fazer."
                 );
+            } else if (type === 'galleryImage') {
+                confirmAction = () => deleteGalleryImage(id);
+                showConfirmationModal("Apagar Imagem?", "Esta ação irá apagar a imagem da galeria. Não pode ser revertida.");
             }
         };
 
