@@ -1,3844 +1,1885 @@
 <!DOCTYPE html>
-
 <html lang="pt-PT">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
-
     <title>Planer Taekwondo (by Carlos Mata)</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
-
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
         body {
-
             font-family: 'Inter', sans-serif;
-
             background-color: #111827; /* gray-900 */
-
             color: #d1d5db; /* gray-300 */
-
         }
-
         .glass-effect {
-
             background: rgba(31, 41, 55, 0.7); /* gray-800 with opacity */
-
             backdrop-filter: blur(10px);
-
             border: 1px solid rgba(55, 65, 81, 0.3); /* gray-700 with opacity */
-
         }
-
         .modal { display: none; }
-
         .modal.flex { display: flex; }
-
         .modal-content { max-height: 90vh; }
-
         ::-webkit-scrollbar { width: 8px; }
-
         ::-webkit-scrollbar-track { background: #1f2937; }
-
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-
         .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; cursor: pointer; }
-
         .btn-primary { background-color: #4f46e5; color: white; }
-
         .btn-primary:hover { background-color: #4338ca; }
-
-
         .btn-primary:disabled { background-color: #6b7280; cursor: not-allowed; }
-
         .btn-secondary { background-color: #4b5563; color: white; }
-
         .btn-secondary:hover { background-color: #6b7280; }
-
         .btn-danger { background-color: #dc2626; color: white; }
-
         .btn-danger:hover { background-color: #b91c1c; }
-
         .btn-teal { background-color: #0d9488; color: white; }
-
         .btn-teal:hover { background-color: #0f766e; }
-
         .nav-button.active {
-
              background-color: #4f46e5;
-
              color: white;
-
         }
-
         .session-square {
-
             aspect-ratio: 1 / 1;
-
             display: flex;
-
             align-items: center;
-
             justify-content: center;
-
             position: relative;
-
             font-size: 0.65rem; 
-
             line-height: 1;
-
         }
-
         .session-square.logged::after {
-
             content: '';
-
             position: absolute;
-
             top: 5px;
-
             right: 5px;
-
             width: 8px;
-
             height: 8px;
-
             background-color: #3b82f6; /* blue-500 */
-
             border-radius: 50%;
-
             border: 1px solid #1f2937; /* gray-800 */
-
         }
-
         #toast-container {
-
             position: fixed;
-
             top: 1.25rem;
-
             right: 1.25rem;
-
             z-index: 50;
-
             display: flex;
-
             flex-direction: column;
-
             gap: 0.5rem;
-
         }
-
     </style>
-
 </head>
-
 <body class="min-h-screen">
 
-
-
     <div id="app" style="display: none;">
-
         <!-- Navigation Bar -->
-
         <nav class="glass-effect sticky top-0 z-40">
-
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
                 <div class="flex items-center justify-between h-16">
-
                     <div class="flex-shrink-0">
-
                         <div>
-
                             <h1 class="text-xl font-bold text-white">Planer Taekwondo <span class="text-base font-normal text-gray-300">(by Carlos Mata)</span></h1>
-
                              <div class="flex items-center gap-2">
-
                                  <span class="text-xs font-medium text-gray-400">ID de Treinador:</span>
-
                                  <span id="user-id-display" class="text-xs font-semibold text-gray-300"></span>
-
                              </div>
-
                         </div>
-
                     </div>
-
                     <!-- Menu para PC (escondido em ecrãs pequenos) -->
-
                     <div class="hidden md:block">
-
                         <div class="ml-10 flex items-baseline space-x-4">
-
                             <a href="#" id="nav-meus-planos" onclick="window.showView('training-plans-list-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Os Meus Planos</a>
-
                             <a href="#" id="nav-novo-plano" onclick="window.createNewTrainingPlan()" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Novo Plano</a>
-
                             <a href="#" id="nav-novo-exercicio" onclick="window.createNewExercise()" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Novo Exercício</a>
-
                             <a href="#" id="nav-biblioteca" onclick="window.showView('exercise-library-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Biblioteca Partilhada</a>
-
                             <a href="#" id="nav-galeria" onclick="window.showView('image-gallery-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Galeria de Imagens</a>
-
                             <a href="#" id="nav-mapa" onclick="window.showView('content-map-view')" class="nav-button text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Mapa de Conteúdos</a>
-
                         </div>
-
                     </div>
-
                     <!-- Botão Hambúrguer (só aparece em ecrãs pequenos) -->
-
                     <div class="-mr-2 flex md:hidden">
-
                         <button id="mobile-menu-button" type="button" class="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
-
                             <span class="sr-only">Abrir menu principal</span>
-
                             <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-
                             </svg>
-
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
-
              <!-- Menu Móvel (escondido por defeito) -->
-
             <div class="md:hidden hidden" id="mobile-menu">
-
                 <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-
                     <a href="#" onclick="window.showView('training-plans-list-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Os Meus Planos</a>
-
                     <a href="#" onclick="window.createNewTrainingPlan(); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Novo Plano</a>
-
                     <a href="#" onclick="window.createNewExercise(); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Novo Exercício</a>
-
                     <a href="#" onclick="window.showView('exercise-library-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Biblioteca Partilhada</a>
-
                     <a href="#" onclick="window.showView('image-gallery-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Galeria de Imagens</a>
-
                     <a href="#" onclick="window.showView('content-map-view'); window.toggleMobileMenu();" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Mapa de Conteúdos</a>
-
                 </div>
-
             </div>
-
         </nav>
 
-
-
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-
             <!-- Training Plans List View -->
-
             <div id="training-plans-list-view" class="p-4 md:p-0 view">
-
                 <div class="flex justify-between items-center mb-6">
-
                     <h2 class="text-2xl font-semibold text-white">Os Meus Planos de Treino (Privados)</h2>
-
                     <button onclick="window.createNewTrainingPlan()" class="btn btn-primary">Criar Novo Plano</button>
-
                 </div>
-
                 <div id="plans-list-container" class="space-y-4"></div>
-
             </div>
-
-
 
             <!-- Training Plan Editor View -->
-
             <div id="training-plan-editor-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-
                 <h2 class="text-3xl font-bold text-white mb-6" id="editor-title">Novo Plano de Treino</h2>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="plan-metadata-grid"></div>
-
                 <div id="training-plan-sections" class="space-y-8"></div>
-
                 <div class="mt-8 flex flex-wrap gap-4 justify-end items-center">
-
                      <div class="flex items-center gap-2 mr-4">
-
                          <span class="text-sm font-medium text-gray-400">Tempo Total de Treino:</span>
-
                          <div id="footer-calculated-total-time" class="text-lg font-bold text-white bg-gray-900 px-3 py-1 rounded-md">0 min</div>
-
                      </div>
-
                     <button onclick="window.showView('training-plans-list-view')" class="btn btn-secondary">Cancelar</button>
-
                     <button onclick="window.exportPlanToPDF()" class="btn btn-teal">Exportar PDF</button>
-
                     <button id="save-plan-btn" onclick="window.saveTrainingPlan()" class="btn btn-primary">Guardar Plano</button>
-
                 </div>
-
             </div>
-
-
-
+            
             <!-- Exercise Library View -->
-
             <div id="exercise-library-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-
                 <div class="flex justify-between items-center mb-6">
-
                     <h2 class="text-2xl font-semibold text-white">Biblioteca de Exercícios (Partilhada)</h2>
-
                     <button onclick="window.createNewExercise()" class="btn btn-primary">Adicionar Exercício</button>
-
                 </div>
-
                 <div id="exercise-list-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8"></div>
-
             </div>
-
-
 
             <!-- Exercise Editor View -->
-
             <div id="exercise-editor-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-
                 <form id="exercise-form" class="space-y-4"></form>
-
                 <div id="exercise-editor-footer" class="mt-8 flex flex-wrap gap-4 justify-end">
-
                     <!-- Buttons will be rendered here by JS -->
-
                 </div>
-
             </div>
-
-
-
+            
             <!-- Image Gallery View -->
-
             <div id="image-gallery-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-
                 <div class="flex justify-between items-center mb-6">
-
                     <h2 class="text-2xl font-semibold text-white">Galeria de Imagens</h2>
-
                     <label for="gallery-upload-input" class="btn btn-primary">
-
                         Carregar Nova Imagem
-
                         <input type="file" id="gallery-upload-input" class="hidden" accept="image/jpeg,image/png,image/gif,video/mp4,video/webm" onchange="window.handleGalleryUpload(this.files[0])">
-
                     </label>
-
                 </div>
-
                 <div id="image-gallery-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-
             </div>
-
-
 
              <!-- Content Map View -->
-
             <div id="content-map-view" class="p-4 md:p-8 glass-effect rounded-lg hidden view">
-
                 <div class="flex flex-wrap gap-4 justify-between items-center mb-4">
-
                     <h2 class="text-2xl font-semibold text-white">Mapa de Conteúdos Trabalhados</h2>
-
                     <div class="flex gap-2">
-
                         <button id="add-sessions-btn" class="btn btn-secondary">+12 Sessões</button>
-
                         <button id="generate-chart-btn" class="btn btn-primary">Gerar Gráfico</button>
-
                     </div>
-
                 </div>
-
-
-
+                
                 <div class="mb-6" id="chart-container" style="display: none;">
-
                     <canvas id="content-chart"></canvas>
-
                     <div id="chart-legend" class="flex justify-center flex-wrap gap-x-4 gap-y-2 mt-4 text-xs">
-
                          <div class="flex items-center gap-2">
-
                              <span class="w-4 h-4 rounded" style="background-color: rgba(59, 130, 246, 0.8);"></span>
-
                              <span>Capacidades Físicas</span>
-
                          </div>
-
                          <div class="flex items-center gap-2">
-
                              <span class="w-4 h-4 rounded" style="background-color: rgba(16, 185, 129, 0.8);"></span>
-
                              <span>Capacidades Coordenativas</span>
-
                          </div>
-
                          <div class="flex items-center gap-2">
-
                              <span class="w-4 h-4 rounded" style="background-color: rgba(239, 68, 68, 0.8);"></span>
-
                              <span>Conteúdos Técnico Táticos</span>
-
                          </div>
-
                          <div class="flex items-center gap-2">
-
                              <span class="w-4 h-4 rounded" style="background-color: rgba(168, 85, 247, 0.8);"></span>
-
                              <span>Capacidades Psicológicas/cognitivas</span>
-
                          </div>
-
                     </div>
-
                 </div>
-
-
 
                 <div id="content-grid-container" class="grid grid-cols-8 md:grid-cols-14 gap-2">
-
                     <!-- Session squares will be generated by JS -->
-
                 </div>
-
             </div>
-
-
 
         </main>
-
-
-
+        
         <!-- Modals -->
-
         <div id="image-gallery-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
-
             <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl transform transition-all">
-
                 <div class="flex justify-between items-center mb-4">
-
                     <h3 class="text-xl font-medium text-white">Selecionar Imagem da Galeria</h3>
-
                     <button onclick="window.hideImageGalleryModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
-
                 </div>
-
                 <div id="image-gallery-modal-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 overflow-y-auto max-h-[60vh]">
-
                    <!-- Images for selection will be loaded here -->
-
                 </div>
-
             </div>
-
         </div>
-
-
-
+        
         <div id="content-log-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
-
             <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl transform transition-all">
-
                 <div class="flex justify-between items-center mb-4">
-
                     <h3 class="text-xl font-medium text-white" id="content-log-modal-title">Registar Conteúdos da Sessão</h3>
-
                     <button onclick="window.hideContentLogModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
-
                 </div>
-
                 <div id="content-log-checkboxes" class="space-y-4 overflow-y-auto max-h-[60vh]">
-
                     <!-- Checkboxes will be rendered here -->
-
                 </div>
-
                 <div class="mt-6 flex justify-between items-center">
-
                     <button id="delete-content-log-btn" class="btn btn-danger">Apagar Registo</button>
-
                     <button id="save-content-log-btn" class="btn btn-primary">Guardar</button>
-
                 </div>
-
             </div>
-
         </div>
-
-
 
         <div id="exercise-library-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
-
             <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl transform transition-all">
-
                 <div class="flex justify-between items-center mb-4">
-
                     <h3 class="text-xl font-medium text-white">Adicionar Exercício da Biblioteca</h3>
-
                     <button onclick="window.hideExerciseLibraryModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
-
                 </div>
-
                 <div class="mb-4">
-
                     <input type="text" id="library-search-input" placeholder="Pesquisar exercícios..." class="w-full text-sm bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white">
-
                 </div>
-
                 <div id="library-modal-list-container" class="space-y-2 overflow-y-auto max-h-[60vh]">
-
                     <!-- Exercises will be rendered here -->
-
                 </div>
-
             </div>
-
         </div>
-
-
 
         <div id="confirmation-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
-
             <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
-
                 <h3 class="text-lg font-medium text-white" id="confirm-title">Tem a certeza?</h3>
-
                 <p class="text-sm text-gray-400 mt-2" id="confirm-message">Esta ação não pode ser revertida.</p>
-
                 <div class="mt-6 flex justify-end space-x-3">
-
                     <button id="confirm-cancel-btn" class="btn btn-secondary">Cancelar</button>
-
                     <button id="confirm-action-btn" class="btn btn-danger">Apagar</button>
-
                 </div>
-
             </div>
-
         </div>
-
-
-
+        
         <div id="firebase-rules-modal" class="modal fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
-
             <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl">
-
                 <div class="flex justify-between items-center">
-
                     <h3 class="text-lg font-medium text-yellow-400">Ação Necessária: Configurar Regras de Segurança</h3>
-
                     <button onclick="document.getElementById('firebase-rules-modal').classList.remove('flex')" class="text-gray-400 hover:text-white text-3xl">&times;</button>
-
                 </div>
-
                 <p class="text-sm text-gray-300 mt-4">
-
                     Ocorreu um erro de permissão. Para poder enviar ficheiros (imagens/vídeos), precisa de atualizar as regras de segurança do <strong>Firebase Storage</strong> no seu projeto.
-
                 </p>
-
                 <p class="text-sm text-gray-300 mt-2">
-
                     Este passo é obrigatório e só precisa de ser feito uma vez.
-
                 </p>
-
                 <div class="mt-4">
-
                     <label class="block text-sm font-semibold text-gray-200 mb-1">Copie e cole estas regras na sua consola Firebase:</label>
-
                     <pre class="bg-gray-900 text-white p-3 rounded-md text-xs overflow-x-auto"><code>rules_version = '2';
-
 service firebase.storage {
-
   match /b/{bucket}/o {
-
     match /artifacts/{appId}/users/{userId}/{allPaths=**} {
-
       allow read, write: if request.auth != null && request.auth.uid == userId;
-
     }
-
     // Adicione esta regra para ficheiros públicos de exercícios
-
     match /public_exercises_media/{allPaths=**} {
-
       allow read: if true;
-
       allow write: if request.auth != null;
-
     }
-
   }
-
 }</code></pre>
-
                 </div>
-
                 <p class="text-sm text-gray-400 mt-3"><strong>Onde colar:</strong> Firebase Console > Storage > Rules (Regras)</p>
-
                 <div class="mt-6 flex justify-end">
-
                     <button onclick="document.getElementById('firebase-rules-modal').classList.remove('flex')" class="btn btn-primary">Entendido</button>
-
                 </div>
-
             </div>
-
         </div>
-
-
 
         <div id="toast-container"></div>
-
     </div>
-
     <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50">
-
         <p class="text-white text-xl animate-pulse">A carregar aplicação...</p>
-
     </div>
-
-
-
+    
     <!-- PDF Export Container -->
-
     <div id="pdf-export-container" class="hidden"></div>
-
-
-
+    
     <script type="module">
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
         import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-
-
         // --- GLOBAL STATE & CONFIG ---
-
         const appId = 'taekwondo-planner-public';
-
-
-
+        
         // --- CONFIGURAÇÃO CORRETA DO FIREBASE ---
-
         const firebaseConfig = {
-
             apiKey: "AIzaSyCZR7XPf5o1Tel_kjfATfNu9hu7vlZc8DA",
-
             authDomain: "apptkdplan.firebaseapp.com",
-
             projectId: "apptkdplan",
-
             storageBucket: "apptkdplan.appspot.com",
-
             messagingSenderId: "545125407318",
-
             appId: "1:545125407318:web:a8064dc609c5792564b9f7",
-
             measurementId: "G-Z9QR3EM3XG"
-
         };
-
-
-
+        
         let db, auth, storage;
-
         let userId = null;
-
         let storageEnabled = false;
-
         let currentEditingPlanId = null;
-
         let currentEditingExerciseId = null;
-
         let currentSectionIdForAddingExercise = null;
-
         let currentPlanExerciseIndex = null;
-
         let confirmAction = () => {};
-
         let currentTrainingPlan = {};
-
         let allTrainingPlans = [];
-
         let contentLog = {};
-
         let contentChart = null;
-
         let currentSessionIndex = null;
-
         let numberOfSessions = 140;
-
         let isInitialLoad = true;
-
         let currentExerciseData = {};
-
-
         let isUploading = false; // Bloqueia o botão Guardar
-
-
 
         const intensityOptions = ["Fraca - 50%", "Baixa - 70%", "Média 70 a 85%", "Alta 85 a 95%", "Extrema 95 a 100%"];
 
-
-
         const defaultExerciseTypes = {
-
             "Capacidades Físicas": ["Flexibilidade", "Velocidade", "Resistência", "Força"],
-
             "Capacidades Coordenativas": ["Jogo", "Coordenação", "Equilíbrio", "Ritmo", "Manipulação", "Exercícios gímnicos"],
-
             "Conteúdos Técnico Táticos": [
-
                 "Seogi Kisul", "Son Kisul Makis", "Son Kisul Gongkiok", "Yonsok Dongkia",
-
                 "Bal Kisul Chagis", "Bal Kisul Tuios", "Yonsok Chagui", "Poomsae",
-
                 "Kyorugi Competição", "Kyorugi Demonstração", "Hooshinsul",
-
                 "Sam bo Kyorugi", "Sam bo Kyorugi (Bal Kisul)"
-
             ],
-
             "Capacidades Psicológicas/cognitivas": [
-
                 "Atenção e Concentração",
-
                 "Motivação e Autoconfiança",
-
                 "Gestão de Stress e Ansiedade",
-
                 "Imagética e Visualização",
-
                 "Comunicação e Coesão de Grupo",
-
                 "Autorregulação e Autocontrolo"
-
             ]
-
         };
-
         let allExerciseTypes = JSON.parse(JSON.stringify(defaultExerciseTypes));
-
         let exerciseTypeCategories = Object.keys(allExerciseTypes);
 
 
-
-
-
         const planMetadataFields = [
-
             { id: "Treinador", label: "Treinador", type: "text" }, { id: "Local", label: "Local", type: "text" }, { id: "Data", label: "Data", type: "date" }, { id: "Plano.Nº", label: "Plano Nº", type: "number" },
-
             { id: "Periodo", label: "Período", type: "select", options: ["Preparatório", "Competitivo", "Transitório"] },
-
             { id: "Mesociclo", label: "Mesociclo", type: "select", options: ["Base", "Desenvolvimento", "Controlo", "Competição", "Manutenção"] },
-
             { id: "Microciclo", label: "Microciclo", type: "select", options: ["Ajuste (AJ)", "Carga (CA)", "Impacto (IM)", "Ativação (AT)", "Competição (CO)", "Recuperação (RC)"] },
-
             { id: "Intensidade", label: "Intensidade", type: "select", options: intensityOptions },
-
             { id: "Volume", label: "Volume (min)", type: "number" }, { id: "Conteúdo", label: "Conteúdo", type: "select", options: ["Marcial", "Kyorugi", "Poomsae", "Infantil"] },
-
             { id: "Objectivo Geral", label: "Objectivo Geral", type: "textarea" }, { id: "Objectivo Especifico", label: "Objectivo Específico", type: "textarea" },
-
             { id: "Material", label: "Material", type: "textarea" }, { id: "Equipa", label: "Equipa", type: "text" }
-
         ];
-
-
 
         const trainingSections = [ { id: "parteInicial", title: "Parte Inicial" }, { id: "partePrincipal", title: "Parte Principal" }, { id: "parteFinal", title: "Parte Final" } ];
-
-
-
+        
         const exerciseFields = [
-
             { id: "name", label: "Nome do Exercício", type: "text" }, { id: "description", label: "Descrição", type: "textarea" }, { id: "organization", label: "Organização/Esquema", type: "textarea" },
-
             { id: "successCriteria", label: "Critérios de Êxito", type: "textarea" }
-
         ];
-
-
-
+        
         const staticExerciseLoadFields = [
-
             { id: "repeticoes", label: "Repetições", type: "text" }, { id: "series", label: "Séries", type: "text" }, { id: "pausa", label: "Pausa", type: "text" },
-
             { id: "intensidade", label: "Intensidade", type: "select", options: intensityOptions }, { id: "tempo", label: "Tempo (min)", type: "text"}
-
         ];
-
-
-
 
 
         // --- FIREBASE & APP INITIALIZATION ---
-
         if (firebaseConfig && firebaseConfig.apiKey) {
-
             try {
-
                 const app = initializeApp(firebaseConfig);
-
                 db = getFirestore(app);
-
                 auth = getAuth(app);
 
-
-
                 if (firebaseConfig.storageBucket) {
-
                     storage = getStorage(app);
-
                     storageEnabled = true;
-
                 } else {
-
                     console.warn("Firebase storageBucket not in config. File uploads disabled.");
-
                 }
-
-
 
                 onAuthStateChanged(auth, user => {
-
                     if (user) {
-
                         userId = user.uid;
-
                         initApp();
-
                     } else {
-
                         signInAnonymously(auth).catch(err => {
-
                             console.error("Anonymous Sign In Error:", err);
-
                             document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-center text-lg p-4">Falha na autenticação. Verifique se ativou o login anónimo e se autorizou o domínio na consola Firebase.</p>`;
-
                         });
-
                     }
-
                 });
-
             } catch (error) {
-
                 console.error("Firebase Init Error:", error);
-
                 document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Erro ao iniciar. Verifique a consola.</p>`;
-
             }
-
         } else {
-
              document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 text-xl">Configuração do Firebase em falta. Edite o ficheiro index.html.</p>`;
-
         }
-
-
-
+        
         function initApp() {
-
             document.getElementById('user-id-display').innerText = userId;
-
             if (isInitialLoad) {
-
                 setupEventListeners();
-
                 populateTrainingPlanForm();
-
                 populateExerciseForm();
-
                 renderTrainingSections();
-
             }
-
             finishInitialLoad(); 
-
-
-
+            
             listenForContentTypes(); 
-
             listenForExercises();
-
             listenForTrainingPlans();
-
             listenForContentLog();
-
             listenForGalleryImages();
-
         }
-
-
-
+        
         function finishInitialLoad() {
-
             if (isInitialLoad) {
-
                 showView('training-plans-list-view');
-
                 document.getElementById('app').style.display = 'block';
-
                 document.getElementById('loading-overlay').style.display = 'none';
-
                 isInitialLoad = false;
-
             }
-
         }
-
-
 
         function setupEventListeners() {
-
             document.getElementById('confirm-cancel-btn').addEventListener('click', hideConfirmationModal);
-
             document.getElementById('confirm-action-btn').addEventListener('click', () => {
-
                 if(confirmAction) confirmAction();
-
                 hideConfirmationModal();
-
             });
-
             document.getElementById('library-search-input').addEventListener('input', (e) => {
-
                 renderExerciseLibraryForSelection(e.target.value);
-
             });
-
              document.getElementById('generate-chart-btn').addEventListener('click', generateContentChart);
-
              document.getElementById('save-content-log-btn').addEventListener('click', saveContentLog);
-
              document.getElementById('add-sessions-btn').addEventListener('click', addMoreSessions);
-
              document.getElementById('delete-content-log-btn').addEventListener('click', deleteContentLog);
-
              document.getElementById('mobile-menu-button').addEventListener('click', window.toggleMobileMenu);
-
         }
-
-
 
         // --- VIEW MANAGEMENT ---
-
         window.toggleMobileMenu = () => {
-
             const menu = document.getElementById('mobile-menu');
-
             menu.classList.toggle('hidden');
-
         };
-
-
 
         window.showView = (viewId) => {
-
             document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
-
             document.getElementById(viewId).classList.remove('hidden');
 
-
-
             document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
-
             let activeButton;
-
             if (viewId === 'training-plans-list-view') activeButton = document.getElementById('nav-meus-planos');
-
             else if (viewId === 'training-plan-editor-view') {
-
                  activeButton = document.getElementById(currentEditingPlanId ? 'nav-meus-planos' : 'nav-novo-plano' );
-
             }
-
             else if (viewId === 'exercise-library-view') activeButton = document.getElementById('nav-biblioteca');
-
             else if (viewId === 'exercise-editor-view') {
-
                 activeButton = document.getElementById(currentEditingExerciseId ? 'nav-biblioteca' : 'nav-novo-exercicio');
-
             }
-
              else if (viewId === 'image-gallery-view') activeButton = document.getElementById('nav-galeria');
-
              else if (viewId === 'content-map-view') {
-
                  activeButton = document.getElementById('nav-mapa');
-
                  renderContentGrid();
-
             }
-
             if(activeButton) activeButton.classList.add('active');
-
         };
-
-
 
         // --- TRAINING PLAN LOGIC ---
-
         function listenForTrainingPlans() {
-
             if (!userId) return;
-
             const q = query(collection(db, `artifacts/${appId}/users/${userId}/training_plans`));
-
             onSnapshot(q, (snapshot) => {
-
                 const container = document.getElementById('plans-list-container');
-
                 if (snapshot.empty) {
-
                     container.innerHTML = '<p class="text-center text-gray-500">Ainda não criou nenhum plano. A criar um plano de exemplo...</p>';
-
-
-                    seedInitialDataIfNeeded(); // CORREÇÃO: Chama a função para criar um plano de exemplo se não houver nenhum
-
-
                     seedInitialDataIfNeeded();
-
                     return;
-
                 }
-
                 allTrainingPlans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
                 allTrainingPlans.sort((a, b) => (b.header?.Data || '').localeCompare(a.header?.Data || ''));
-
-
-
+                
                 container.innerHTML = allTrainingPlans.map(plan => `
-
                     <div onclick="window.editTrainingPlan('${plan.id}')" class="glass-effect rounded-lg p-4 flex justify-between items-center cursor-pointer hover:border-indigo-500 border border-transparent transition">
-
                         <div>
-
                             <h3 class="font-bold text-lg text-white">Plano Nº ${plan.header?.['Plano.Nº'] || 'N/A'} - ${plan.header?.Data || 'Sem data'}</h3>
-
                             <p class="text-sm text-gray-400">${plan.header?.['Objectivo Geral'] || 'Sem objectivo'}</p>
-
                         </div>
-
                         <div class="flex space-x-2">
-
                             <button onclick="event.stopPropagation(); window.duplicateTrainingPlan('${plan.id}')" class="btn btn-teal text-sm">Duplicar</button>
-
                             <button onclick="event.stopPropagation(); window.confirmDelete('plan', '${plan.id}')" class="btn btn-danger text-sm">Apagar</button>
-
                         </div>
-
                     </div>
-
                 `).join('');
-
             }, (error) => console.error("Error listening for plans:", error));
-
         }
-
-
-
+        
         async function seedInitialDataIfNeeded() {
-
             const today = new Date().toISOString().split('T')[0];
-
             const examplePlan = {
-
                 header: { "Treinador": "Carlos Mata", "Local": "Dojang Principal", "Data": today, "Plano.Nº": "1", "Periodo": "Preparatório", "Mesociclo": "Base", "Microciclo": "Carga (CA)", "Intensidade": "Média 70 a 85%", "Volume": "90", "Conteúdo": "Técnica", "Objectivo Geral": "Melhorar a execução dos pontapés básicos.", "Objectivo Especifico": "Foco na elevação do joelho e rotação da anca.", "Material": "Escudos de pontapé", "Equipa": "Iniciação" },
-
                 parteInicial: [{ id: Date.now()+1, descricao: "Aquecimento articular geral.", organizacao: "Em círculo, liderado pelo treinador.", tempo: "5", criteriosExito: "Execução completa e controlada dos movimentos.", tipo: "Capacidades Físicas" }],
-
                 partePrincipal: [{ id: Date.now()+2, descricao: "Ap Chagi (Pontapé Frontal) em avanço.", organizacao: "Em 4 linhas, atravessando o Dojang.", tempo: "15", criteriosExito: "Elevação do joelho acima da cintura.", tipo: "Conteúdos Técnico Táticos" }],
-
                 parteFinal: [{ id: Date.now()+3, descricao: "Alongamentos estáticos.", organizacao: "Individual, em silêncio.", tempo: "10", criteriosExito: "Manter cada posição por 30 segundos.", tipo: "Capacidades Físicas" }],
-
                 createdAt: serverTimestamp()
-
             };
-
             try {
-
                 await addDoc(collection(db, `artifacts/${appId}/users/${userId}/training_plans`), examplePlan);
-
                 showToast("Plano de exemplo criado!");
-
             } catch (error) {
-
                 console.error("Erro ao criar plano de exemplo: ", error);
-
             }
-
         }
-
-
-
+        
         window.createNewTrainingPlan = () => {
-
             currentEditingPlanId = null;
-
             document.getElementById('editor-title').innerText = 'Novo Plano de Treino';
-
             currentTrainingPlan = { 
-
                 header: {}, 
-
                 parteInicial: [], 
-
                 partePrincipal: [], 
-
                 parteFinal: []
-
             };
-
             planMetadataFields.forEach(f => {
-
                 currentTrainingPlan.header[f.id] = f.type === 'date' ? new Date().toISOString().split('T')[0] : '';
-
             });
-
             renderTrainingPlanHeader();
-
             renderTrainingPlanExercises();
-
             showView('training-plan-editor-view');
-
         };
-
-
 
         window.editTrainingPlan = async (planId) => {
-
             if (!userId) return;
-
             try {
-
                 const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, planId));
-
                 if (docSnap.exists()) {
-
                     currentEditingPlanId = planId;
-
                     currentTrainingPlan = docSnap.data();
-
                     trainingSections.forEach(sec => {
-
                         if (!Array.isArray(currentTrainingPlan[sec.id])) {
-
                            currentTrainingPlan[sec.id] = [];
-
                         }
-
                     });
-
                     document.getElementById('editor-title').innerText = `Editar Plano Nº ${currentTrainingPlan.header?.['Plano.Nº'] || ''}`;
-
                     renderTrainingPlanHeader();
-
                     renderTrainingPlanExercises();
-
                     showView('training-plan-editor-view');
-
                 }
-
             } catch (error) {
-
                 console.error("Error loading plan:", error); showToast("Erro ao carregar o plano.", true);
-
             }
-
         };
-
-
 
         window.duplicateTrainingPlan = async (planId) => {
-
             if (!userId) return;
-
             const originalPlan = allTrainingPlans.find(p => p.id === planId);
-
             if (!originalPlan) {
-
                 showToast("Plano original não encontrado.", true);
-
                 return;
-
             }
-
-
 
             const newPlan = JSON.parse(JSON.stringify(originalPlan)); // Deep copy
-
             delete newPlan.id; 
-
             newPlan.header['Plano.Nº'] = `${originalPlan.header['Plano.Nº']} (Cópia)`;
-
             newPlan.header['Data'] = new Date().toISOString().split('T')[0];
-
             newPlan.createdAt = serverTimestamp();
 
-
-
             try {
-
                 await addDoc(collection(db, `artifacts/${appId}/users/${userId}/training_plans`), newPlan);
-
                 showToast("Plano duplicado com sucesso!");
-
             } catch (error) {
-
                 console.error("Erro ao duplicar plano:", error);
-
                 showToast("Erro ao duplicar o plano.", true);
-
             }
-
         };
-
-
-
+        
         async function saveExercisesFromPlanToLibrary(plan) {
-
             if (!userId) return;
-
-
-
+            
             const exercisesRef = collection(db, `public_exercises`);
-
             const librarySnapshot = await getDocs(exercisesRef);
-
             const libraryExercises = librarySnapshot.docs.map(doc => doc.data());
-
             const libraryExerciseNames = new Set(libraryExercises.map(ex => ex.name));
 
-
-
             const planExercises = [
-
                 ...(plan.parteInicial || []),
-
                 ...(plan.partePrincipal || []),
-
                 ...(plan.parteFinal || [])
-
             ];
-
-
 
             const newExercisesToSave = [];
 
-
-
             for (const ex of planExercises) {
-
                 const exerciseName = ex.descricao; // Using 'descricao' as the unique name identifier
-
-
-
+                
                 if (exerciseName && !libraryExerciseNames.has(exerciseName)) {
-
                     const newLibraryExercise = {
-
                         name: exerciseName,
-
                         tipo: ex.tipo || '',
-
                         description: ex.descricao || '',
-
                         organization: ex.organizacao || '',
-
                         successCriteria: ex.criteriosExito || '',
-
                         repeticoes: ex.repeticoes || '',
-
                         series: ex.series || '',
-
                         pausa: ex.pausa || '',
-
                         intensidade: ex.intensidade || '',
-
                         tempo: ex.tempo || '',
-
                         createdBy: userId,
-
                         createdAt: serverTimestamp(),
-
                         mediaUrl: ex.mediaUrl || '',
-
                         filePath: ex.filePath || '',
-
                         mediaType: ex.mediaType || ''
-
                     };
-
-
-
+                    
                     newExercisesToSave.push(newLibraryExercise);
-
                     libraryExerciseNames.add(exerciseName); // Avoid duplicates from the same plan
-
                 }
-
             }
-
-
 
             if (newExercisesToSave.length > 0) {
-
                 for (const exerciseToSave of newExercisesToSave) {
-
                     await addDoc(exercisesRef, exerciseToSave);
-
                 }
-
                 showToast(`${newExercisesToSave.length} novo(s) exercício(s) guardado(s) na biblioteca partilhada!`);
-
             }
-
         }
-
-
 
         window.saveTrainingPlan = async () => {
-
             if (!userId) return;
-
-
-
-
-            if (activeUploads > 0) {
-
-
+            
             if (isUploading) {
-
                 showToast("Por favor, aguarde o envio dos ficheiros antes de guardar.", true);
-
                 return;
-
             }
-
-
 
             if (!currentTrainingPlan.header['Plano.Nº'] || !currentTrainingPlan.header.Data) {
-
                 showToast("O Nº do Plano e a Data são obrigatórios.", true);
-
                 return;
-
             }
 
-
-
             try {
-
                 await saveExercisesFromPlanToLibrary(currentTrainingPlan);
 
-
-
                 const planToSave = JSON.parse(JSON.stringify(currentTrainingPlan));
-
-
-                 // Remove temporary local properties before saving
-
-
-                trainingSections.forEach(section => {
-
-
-                    (planToSave[section.id] || []).forEach(ex => {
-
-
-                        delete ex.localMediaUrl;
-
-
-                        delete ex.localMediaType;
-
-
-                    });
-
-
-                });
-
-
-
-
                 if (currentEditingPlanId) {
-
                     await setDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, currentEditingPlanId), planToSave, { merge: true });
-
                     showToast("Plano atualizado com sucesso!");
-
                 } else {
-
                     planToSave.createdAt = serverTimestamp();
-
                     await addDoc(collection(db, `artifacts/${appId}/users/${userId}/training_plans`), planToSave);
-
                     showToast("Plano criado com sucesso!");
-
                 }
-
                 currentEditingPlanId = null;
-
                 showView('training-plans-list-view');
-
             } catch (error) {
-
                 console.error("Erro ao guardar plano:", error);
-
                 showToast("Erro ao guardar o plano.", true);
-
             }
-
         };
-
-
 
         window.deleteTrainingPlan = async (planId) => {
-
             if (!userId) return;
-
             try {
-
                 if (storageEnabled) {
-
                     const planDoc = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, planId));
-
                     if (planDoc.exists()) {
-
                         const planData = planDoc.data();
-
                         for (const section of trainingSections) {
-
                             if (Array.isArray(planData[section.id])) {
-
                                 for (const exercise of planData[section.id]) {
-
                                     if (exercise.filePath) {
-
                                         await deleteFile(exercise.filePath);
-
                                     }
-
                                 }
-
                             }
-
                         }
-
                     }
-
                 }
-
                 await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/training_plans`, planId));
-
                 showToast("Plano apagado com sucesso.");
-
             } catch (error) {
-
                 console.error("Erro ao apagar plano:", error); showToast("Erro ao apagar o plano.", true);
-
             }
-
         };
-
-
 
         function populateTrainingPlanForm() {
-
             const grid = document.getElementById('plan-metadata-grid');
-
             grid.innerHTML = planMetadataFields.map(field => {
-
                 let inputHtml;
-
                 const baseClasses = "w-full text-sm bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white h-[34px]";
-
                 const eventHandler = `oninput="updatePlanHeader('${field.id}', this.value)" onchange="updatePlanHeader('${field.id}', this.value)"`;
-
                 if (field.type === 'select') {
-
                     const optionsHtml = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-
                     inputHtml = `<select id="field-${field.id}" ${eventHandler} class="${baseClasses}">${optionsHtml}</select>`;
-
                 } else if (field.type === 'textarea') {
-
                      inputHtml = `<textarea id="field-${field.id}" ${eventHandler} class="w-full text-sm bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white" rows="2"></textarea>`;
-
                 } else {
-
                     inputHtml = `<input type="${field.type}" id="field-${field.id}" ${eventHandler} class="${baseClasses}">`;
-
                 }
-
-
-
+                
                 let finalHtml = `
-
                     <div class="${field.type === 'textarea' ? 'md:col-span-2' : ''}">
-
                         <label for="field-${field.id}" class="block text-sm font-medium text-gray-400 mb-1">${field.label}</label>
-
                         ${inputHtml}
-
                     </div>
-
                 `;
 
-
-
                 if (field.id === 'Volume') {
-
                     finalHtml += `
-
                         <div>
-
                             <label class="block text-sm font-medium text-gray-400 mb-1">Tempo Total (Exercícios)</label>
-
                             <div id="calculated-total-time" class="w-full text-sm bg-gray-900 border border-gray-700 rounded-md py-1 px-2 text-white h-[34px] flex items-center font-semibold">0 min</div>
-
                         </div>
-
                     `;
-
                 }
-
                 return finalHtml;
 
-
-
             }).join('');
-
         }
-
-
-
+        
         function renderTrainingPlanHeader() {
-
             planMetadataFields.forEach(field => {
-
                 const el = document.getElementById(`field-${field.id}`);
-
                 if (el) el.value = currentTrainingPlan.header?.[field.id] || '';
-
             });
-
         }
-
-
-
+        
         window.updatePlanHeader = (fieldId, value) => {
-
             if(currentTrainingPlan && currentTrainingPlan.header) {
-
                 currentTrainingPlan.header[fieldId] = value;
-
             }
-
         };
-
-
-
+        
         function renderTrainingSections() {
-
             const container = document.getElementById('training-plan-sections');
-
             container.innerHTML = trainingSections.map(section => `
-
                 <div class="glass-effect p-4 rounded-lg">
-
                     <h3 class="text-xl font-semibold text-white mb-4">${section.title}</h3>
-
                     <div id="${section.id}-exercises-container" class="space-y-4"></div>
-
                     <div class="flex gap-2 mt-4 justify-end">
-
                         <button onclick="window.addExerciseToPlan('${section.id}')" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold text-xs py-1 px-3 rounded-md transition">+ Adicionar Exercício</button>
-
                         <button onclick="window.showExerciseLibraryModal('${section.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-1 px-3 rounded-md transition">Adicionar da Biblioteca</button>
-
                     </div>
-
                 </div>
-
             `).join('');
-
         }
-
-
 
         function renderTrainingPlanExercises() {
-
             trainingSections.forEach(section => {
-
                 const container = document.getElementById(`${section.id}-exercises-container`);
-
                 const exercises = currentTrainingPlan[section.id] || [];
-
                 container.innerHTML = exercises.length === 0
-
                     ? `<p class="text-center italic text-gray-500 py-4">Nenhum exercício adicionado a esta secção.</p>`
-
                     : exercises.map((ex, index) => {
-
                         const baseInputClasses = "w-full text-sm bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white";
-
                         const centeredInputClasses = `${baseInputClasses} text-center`;
-
                         const labelClasses = "block text-sm font-medium text-gray-400 mb-1";
-
                         const tipoOptions = exerciseTypeCategories.map(cat => `<option value="${cat}" ${ex.tipo === cat ? 'selected' : ''}>${cat}</option>`).join('');
-
                         let mediaPreview = '';
-
-
-
+                        
                         if (ex.mediaUrl) {
-
                             if (ex.mediaType?.startsWith('image/')) {
-
                                 mediaPreview = `<img src="${ex.mediaUrl}" class="rounded-md max-h-40 w-auto">`;
-
                             } else if (ex.mediaType?.startsWith('video/')) {
-
                                 mediaPreview = `<video src="${ex.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
-
                             }
-
                         }
-
-
 
                         return `
-
                         <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 relative">
-
                             <button onclick="window.removeExerciseFromPlan('${section.id}', ${index})" class="absolute top-2 right-2 text-red-400 hover:text-red-300 text-2xl leading-none z-10">&times;</button>
-
                             <div class="flex flex-wrap gap-2">
-
                                 <select oninput="updateExerciseInPlan('${section.id}', ${index}, 'tipo', this.value)" class="${baseInputClasses} flex-1 min-w-[120px]"><option value="" disabled ${!ex.tipo ? 'selected' : ''}>Tipo de Exercício</option>${tipoOptions}</select>
-
                                 <input type="text" placeholder="Repetições" value="${ex.repeticoes || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'repeticoes', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
-
                                 <input type="text" placeholder="Séries" value="${ex.series || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'series', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
-
                                 <input type="text" placeholder="Pausa" value="${ex.pausa || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'pausa', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
-
                                 <select oninput="updateExerciseInPlan('${section.id}', ${index}, 'intensidade', this.value)" class="${baseInputClasses} flex-1 min-w-[120px]"><option value="" disabled ${!ex.intensidade ? 'selected' : ''}>Intensidade</option>${intensityOptions.map(opt => `<option value="${opt}" ${ex.intensidade === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select>
-
                                 <input type="text" placeholder="Tempo (min)" value="${ex.tempo || ''}" oninput="updateExerciseInPlan('${section.id}', ${index}, 'tempo', this.value)" class="${centeredInputClasses} flex-1 min-w-[80px]">
-
                             </div>
-
                             <div class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-4">
-
                                 <div class="md:col-span-2">
-
                                     <label class="${labelClasses}">Descrição</label>
-
                                     <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'descricao', this.value)" class="${baseInputClasses}" rows="4">${ex.descricao || ''}</textarea>
-
                                 </div>
-
                                 <div class="md:col-span-2">
-
                                     <div class="flex justify-between items-center mb-1">
-
                                         <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
-
                                         <button onclick="window.showImageGalleryModal('${section.id}', ${index})" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Adicionar da Galeria</button>
-
                                     </div>
-
                                     <div class="bg-gray-700 border border-gray-600 rounded-md p-2">
-
                                         <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'organizacao', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4" style="display: ${ex.mediaUrl ? 'none' : 'block'};">${ex.organizacao || ''}</textarea>
-
                                         <div class="mt-2">${mediaPreview}</div>
-
                                     </div>
-
                                 </div>
-
                                 <div class="md:col-span-1">
-
                                     <label class="${labelClasses}">Critérios Êxito</label>
-
                                     <textarea oninput="updateExerciseInPlan('${section.id}', ${index}, 'criteriosExito', this.value)" class="${baseInputClasses}" rows="4">${ex.criteriosExito || ''}</textarea>
-
                                 </div>
-
                             </div>
-
                         </div>
-
                         `;
-
                     }).join('');
-
             });
-
             updateCalculatedTotalTime();
-
         }
-
-
 
         window.addExerciseToPlan = (sectionId) => {
-
             if (!currentTrainingPlan[sectionId]) currentTrainingPlan[sectionId] = [];
-
             currentTrainingPlan[sectionId].push({ id: Date.now() });
-
             renderTrainingPlanExercises();
-
         };
-
-
 
         window.updateExerciseInPlan = (sectionId, index, field, value) => {
-
             if (currentTrainingPlan[sectionId]?.[index]) {
-
                 currentTrainingPlan[sectionId][index][field] = value;
-
                 if (field === 'tempo') {
-
                     updateCalculatedTotalTime();
-
                 }
-
             }
-
         };
-
-
-
-        window.removeExerciseFromPlan = async (sectionId, index) => {
-
-            currentTrainingPlan[sectionId]?.splice(index, 1);
-
-            renderTrainingPlanExercises();
-
-        };
-
-
-
-
-        // --- FILE HANDLING & IMAGE GALLERY ---
-
-
         
-
+        window.removeExerciseFromPlan = async (sectionId, index) => {
+            currentTrainingPlan[sectionId]?.splice(index, 1);
+            renderTrainingPlanExercises();
+        };
 
         // --- IMAGE GALLERY ---
-
         function listenForGalleryImages() {
-
             if (!userId) return;
-
             const q = query(collection(db, `artifacts/${appId}/users/${userId}/gallery`));
-
             onSnapshot(q, (snapshot) => {
-
                 const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
                 renderImageGallery(images);
-
                 renderImageGalleryModal(images);
-
             });
-
         }
-
-
-
+        
         function renderImageGallery(images) {
-
             const container = document.getElementById('image-gallery-container');
-
             if (!container) return;
-
             if (images.length === 0) {
-
                 container.innerHTML = `<p class="col-span-full text-center text-gray-500">A sua galeria está vazia.</p>`;
-
                 return;
-
             }
-
             container.innerHTML = images.map(img => `
-
                 <div class="relative group">
-
                     <img src="${img.url}" class="w-full h-24 object-cover rounded-md">
-
                     <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-
                         <button onclick="window.copyToClipboard('${img.url}')" class="btn btn-secondary btn-sm text-xs mb-1">Copiar URL</button>
-
                         <button onclick="window.confirmDelete('galleryImage', '${img.id}')" class="btn btn-danger btn-sm text-xs">Apagar</button>
-
                     </div>
-
                 </div>
-
             `).join('');
-
         }
-
-
-
+        
         function renderImageGalleryModal(images) {
-
             const container = document.getElementById('image-gallery-modal-container');
-
              if (!container) return;
-
             if (images.length === 0) {
-
                 container.innerHTML = `<p class="col-span-full text-center text-gray-500">A sua galeria está vazia. Carregue imagens no separador 'Galeria de Imagens'.</p>`;
-
                 return;
-
             }
-
             container.innerHTML = images.map(img => `
-
                 <div class="cursor-pointer" onclick="window.selectImageFromGallery('${img.url}', '${img.type}')">
-
                     <img src="${img.url}" class="w-full h-24 object-cover rounded-md border-2 border-transparent hover:border-indigo-500 transition">
-
                 </div>
-
             `).join('');
-
         }
-
-
 
         window.handleGalleryUpload = async (file) => {
-
             if (!storageEnabled || !userId || !file) return;
-
-
-
-
+            
             isUploading = true;
-
-
             updateSaveButtonState(true);
-
             const toastId = showToast(`A enviar ${file.name}...`, false, true);
-
             const filePath = `artifacts/${appId}/users/${userId}/gallery/${Date.now()}-${file.name}`;
-
             const fileRef = ref(storage, filePath);
-
-
-
+            
             try {
-
                 const snapshot = await uploadBytes(fileRef, file);
-
                 const downloadURL = await getDownloadURL(snapshot.ref);
 
-
-
                 await addDoc(collection(db, `artifacts/${appId}/users/${userId}/gallery`), {
-
                     url: downloadURL,
-
                     path: filePath,
-
                     type: file.type,
-
                     createdAt: serverTimestamp()
-
                 });
-
                 showToast("Imagem adicionada à galeria!", false, false, toastId);
-
             } catch (error) {
-
                  console.error("Erro no envio do ficheiro para a galeria:", error);
-
                  showToast("Erro ao enviar o ficheiro.", true, false, toastId);
-
-
             } finally {
-
-
                 isUploading = false;
-
-
                 updateSaveButtonState(false);
-
             }
-
         };
-
-
-
+        
         window.deleteGalleryImage = async (imageId) => {
-
             if (!userId || !imageId) return;
-
             try {
-
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/gallery`, imageId);
-
                 const docSnap = await getDoc(docRef);
-
                 if(docSnap.exists()){
-
                     const filePath = docSnap.data().path;
-
                     if(filePath) {
-
                         const fileRef = ref(storage, filePath);
-
                         await deleteObject(fileRef);
-
                     }
-
                     await deleteDoc(docRef);
-
                     showToast("Imagem apagada da galeria.");
-
                 }
-
             } catch(error) {
-
                 console.error("Erro ao apagar imagem da galeria: ", error);
-
                 showToast("Erro ao apagar imagem.", true);
-
             }
-
         };
-
-
-
-
-        window.showImageGalleryModal = (sectionId, index) => {
-
-
-            currentSectionIdForAddingExercise = sectionId;
-
-
-            currentPlanExerciseIndex = index;
-
 
         window.showImageGalleryModal = (sectionId, index, forExercise = false) => {
-
-
             if (forExercise) {
-
-
                 currentSectionIdForAddingExercise = null;
-
-
                 currentPlanExerciseIndex = null;
-
-
             } else {
-
-
                 currentSectionIdForAddingExercise = sectionId;
-
-
                 currentPlanExerciseIndex = index;
-
-
             }
-
             document.getElementById('image-gallery-modal').classList.add('flex');
-
         };
-
-
 
         window.hideImageGalleryModal = () => {
-
             document.getElementById('image-gallery-modal').classList.remove('flex');
-
         };
-
-
-
+        
         window.selectImageFromGallery = (url, type) => {
-
             if (currentSectionIdForAddingExercise !== null && currentPlanExerciseIndex !== null) {
-
                 const exercise = currentTrainingPlan[currentSectionIdForAddingExercise][currentPlanExerciseIndex];
-
                 if (exercise) {
-
                     exercise.mediaUrl = url;
-
                     exercise.mediaType = type;
-
                     renderTrainingPlanExercises();
-
                 }
-
             } else if (currentEditingExerciseId) {
-
                 currentExerciseData.mediaUrl = url;
-
                 currentExerciseData.mediaType = type;
-
                 showExerciseEditor(currentEditingExerciseId); // Re-render editor with image
-
             }
-
             hideImageGalleryModal();
-
         };
-
-
 
         window.copyToClipboard = (text) => {
-
             const ta = document.createElement('textarea');
-
             ta.value = text;
-
             document.body.appendChild(ta);
-
             ta.select();
-
             document.execCommand('copy');
-
             document.body.removeChild(ta);
-
             showToast("URL copiado!");
-
         };
 
-
-
         async function deleteFile(filePath) {
-
             if (!storageEnabled || !filePath) return;
-
             try {
-
                 const fileRef = ref(storage, filePath);
-
                 await deleteObject(fileRef);
-
             } catch (error) {
-
                 if (error.code !== 'storage/object-not-found') {
-
                      console.error("Erro ao apagar ficheiro:", error);
-
                 }
-
             }
-
         }
-
-
-
+        
         function updateCalculatedTotalTime() {
-
             if (!currentTrainingPlan) return 0;
 
-
-
             let totalMinutes = 0;
-
             trainingSections.forEach(section => {
-
                 const exercises = currentTrainingPlan[section.id] || [];
-
                 exercises.forEach(ex => {
-
                     const time = parseFloat(ex.tempo);
-
                     if (!isNaN(time)) {
-
                         totalMinutes += time;
-
                     }
-
                 });
-
             });
-
-
 
             const headerDisplayElement = document.getElementById('calculated-total-time');
-
             if (headerDisplayElement) {
-
                 headerDisplayElement.textContent = `${totalMinutes} min`;
-
             }
-
             const footerDisplayElement = document.getElementById('footer-calculated-total-time');
-
             if (footerDisplayElement) {
-
                 footerDisplayElement.textContent = `${totalMinutes} min`;
-
             }
-
             return totalMinutes;
-
         }
-
-
 
         // --- EXERCISE LIBRARY LOGIC ---
-
         function listenForContentTypes() {
-
             if (!userId) return;
-
             // Content types remain user-specific for now to allow customization
-
             const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, 'contentTypes');
-
             onSnapshot(docRef, (docSnap) => {
-
                 if (docSnap.exists()) {
-
                     let data = docSnap.data();
-
                     let needsUpdate = false;
-
                     for (const category in defaultExerciseTypes) {
-
                         if (!data.hasOwnProperty(category) || !Array.isArray(data[category])) {
-
                             data[category] = defaultExerciseTypes[category];
-
                             needsUpdate = true;
-
                         }
-
                     }
-
                     allExerciseTypes = data;
-
                     if (needsUpdate) {
-
                         setDoc(docRef, allExerciseTypes, { merge: true });
-
                     }
-
                 } else {
-
                     setDoc(docRef, defaultExerciseTypes);
-
                     allExerciseTypes = JSON.parse(JSON.stringify(defaultExerciseTypes));
-
                 }
-
                 exerciseTypeCategories = Object.keys(allExerciseTypes);
-
             }, (error) => {
-
                 console.error("Error listening for content types:", error);
-
             });
-
         }
 
-
-
         function listenForExercises() {
-
             if (!userId) return;
-
             const q = query(collection(db, `public_exercises`));
-
             onSnapshot(q, (snapshot) => {
-
                 const container = document.getElementById('exercise-list-container');
-
                 if (snapshot.empty) {
-
                     container.innerHTML = '<div class="col-span-full text-center text-gray-500">A biblioteca partilhada está vazia.</div>';
-
                     return;
-
                 }
-
-
-
+                
                 const exercises = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-
-
                 const exercisesByCategory = {};
-
                 exerciseTypeCategories.forEach(cat => exercisesByCategory[cat] = []);
-
-
-
+                
                 // Handle exercises that might not have a type yet
-
                 exercises.forEach(ex => {
-
                     const category = ex.tipo || "Sem Categoria";
-
                     if (!exercisesByCategory[category]) {
-
                         exercisesByCategory[category] = [];
-
                     }
-
                     exercisesByCategory[category].push(ex);
-
                 });
-
-
-
+                
                 const finalCategories = Object.keys(exercisesByCategory).sort();
 
-
-
                 let html = '';
-
                 finalCategories.forEach(category => {
-
                     const categoryExercises = exercisesByCategory[category];
-
                     if (categoryExercises.length === 0) return;
 
-
-
                     html += `<div class="flex flex-col space-y-2">`;
-
                     html += `<h3 class="text-lg font-semibold text-white border-b border-gray-700 pb-2 mb-2">${category}</h3>`;
-
-
-
+                    
                      categoryExercises.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
-
                      categoryExercises.forEach(ex => {
-
                         if (ex.name === "Novo Exercício..." && ex.createdBy !== userId) return;
 
-
-
                         html += `
-
                             <div class="flex items-center justify-between gap-2 bg-gray-800/50 rounded-md p-2">
-
                                <button onclick="window.showExerciseEditor('${ex.id}')" class="flex-grow text-left text-sm truncate pr-2 hover:text-indigo-400 transition">
-
                                    ${ex.name}
-
                                </button>
-
                                <div class="flex-shrink-0 flex items-center gap-2">
-
                          `;
-
                          if (ex.createdBy === userId) {
-
                              html += `
-
                                 <button onclick="window.showExerciseEditor('${ex.id}')" title="Editar" class="btn btn-secondary p-0 h-8 w-8 flex items-center justify-center text-xs">
-
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 5.732z" /></svg>
-
                                 </button>
-
                                 <button onclick="event.stopPropagation(); window.confirmDelete('exercise', '${ex.id}')" title="Apagar" class="btn btn-danger p-0 h-8 w-8 flex items-center justify-center text-xs">
-
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-
                                 </button>
-
                              `;
-
                          } else {
-
                              html += `
-
                                 <button onclick="window.showExerciseEditor('${ex.id}')" class="btn btn-secondary text-xs px-3 py-1 h-8">
-
                                     Ver
-
                                 </button>
-
                              `;
-
                          }
-
                          html += `</div></div>`;
-
                      });
-
-
-
+                    
                     html += `</div>`;
-
                 });
-
-
 
                 container.innerHTML = html || '<div class="col-span-full text-center text-gray-500">Nenhum exercício encontrado.</div>';
 
-
-
             }, (error) => console.error("Error listening for exercises:", error));
-
         }
-
-
-
 
 
         window.saveExercise = async () => {
-
             if (!userId) return;
-
             const exerciseData = { ...currentExerciseData };
-
             const allFields = [...exerciseFields, {id: 'tipo'}, ...staticExerciseLoadFields];
-
             allFields.forEach(f => {
-
                 const el = document.getElementById(`ex-field-${f.id}`);
-
                 if (el) exerciseData[f.id] = el.value;
-
             });
-
-
-
+            
             if (!exerciseData.name || exerciseData.name.trim() === "" || exerciseData.name === "Novo Exercício...") {
-
                 showToast("O nome do exercício é obrigatório.", true);
-
                 return;
-
             }
-
-
-
+            
             try {
-
                 exerciseData.createdBy = userId; 
-
                 await setDoc(doc(db, `public_exercises`, currentEditingExerciseId), exerciseData, { merge: true });
-
                 showToast("Exercício guardado na biblioteca partilhada!");
-
                 showView('exercise-library-view');
-
             } catch (error) {
-
                 console.error("Erro ao guardar exercício:", error); showToast("Erro ao guardar o exercício.", true);
-
             }
-
         };
-
-
 
         window.cancelExerciseEdit = async () => {
-
             try {
-
                 const docRef = doc(db, `public_exercises`, currentEditingExerciseId);
-
                 const docSnap = await getDoc(docRef);
-
                 if (docSnap.exists() && docSnap.data().name === "Novo Exercício...") {
-
                     await deleteExercise(currentEditingExerciseId, true); 
-
                 }
-
             } catch (error) {
-
                 console.error("Could not check/delete draft exercise", error);
-
             }
-
             showView('exercise-library-view');
-
         }
 
-
-
         window.deleteExercise = async (exerciseId, suppressToast = false) => {
-
              if (!userId) return;
-
             try {
-
                 const docRef = doc(db, `public_exercises`, exerciseId);
-
                 const docSnap = await getDoc(docRef);
 
-
-
                 if (docSnap.exists() && docSnap.data().createdBy !== userId) {
-
                     showToast("Não pode apagar um exercício que não criou.", true);
-
                     return;
-
                 }
-
-
 
                 if (docSnap.exists() && docSnap.data().filePath) {
-
                     await deleteFile(docSnap.data().filePath);
-
                 }
-
                 await deleteDoc(docRef);
-
                 if (!suppressToast) {
-
                     showToast("Exercício apagado com sucesso.");
-
                 }
-
             } catch (error) {
-
                 console.error("Erro ao apagar exercício:", error); showToast("Erro ao apagar o exercício.", true);
-
             }
-
         };
-
-
-
+        
         function populateExerciseForm() {
-
             const form = document.getElementById('exercise-form');
-
             if (!form) return;
-
-
-
+            
             const baseClasses = "w-full text-sm bg-gray-600 border-gray-500 rounded-md py-1 px-2 text-white";
-
             const centeredInputClasses = `${baseClasses} text-center`;
-
             const labelClasses = "block text-sm font-medium text-gray-400 mb-1";
 
-
-
             const nameField = exerciseFields.find(f => f.id === 'name');
-
             const descriptionField = exerciseFields.find(f => f.id === 'description');
-
             const organizationField = exerciseFields.find(f => f.id === 'organization');
-
             const criteriaField = exerciseFields.find(f => f.id === 'successCriteria');
-
-
 
             const optionsHtml = exerciseTypeCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
 
-
-
             const staticFieldsHtml = staticExerciseLoadFields.map(f => {
-
                 if (f.type === 'select') {
-
                     const optionsHtml = f.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-
                     return `<select id="ex-field-${f.id}" class="${baseClasses} flex-1 min-w-[120px]">
-
                                 <option value="" disabled selected>${f.label}</option>
-
                                 ${optionsHtml}
-
                             </select>`;
-
                 } else {
-
                     return `<input type="text" placeholder="${f.label}" id="ex-field-${f.id}" class="${centeredInputClasses} flex-1 min-w-[80px]">`;
-
                 }
-
             }).join('');
 
-
-
             form.innerHTML = `
-
                 <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 space-y-4">
-
                     <div>
-
                         <label for="ex-field-${nameField.id}" class="${labelClasses}">${nameField.label}</label>
-
                         <input type="${nameField.type}" id="ex-field-${nameField.id}" class="${baseClasses}">
-
                     </div>
-
-
 
                     <div class="flex flex-wrap gap-2">
-
                          <select id="ex-field-tipo" class="${baseClasses} flex-1 min-w-[120px]">
-
                             <option value="" disabled selected>Tipo de Exercício</option>
-
                             ${optionsHtml}
-
                          </select>
-
                         ${staticFieldsHtml}
-
                     </div>
-
-
 
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-
                         <div class="md:col-span-2">
-
                             <label class="${labelClasses}">${descriptionField.label}</label>
-
                             <textarea id="ex-field-${descriptionField.id}" class="${baseClasses}" rows="4"></textarea>
-
                         </div>
-
                         <div class="md:col-span-2">
-
                              <div id="ex-media-container" class="flex justify-between items-center mb-1">
-
                                  <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
-
                                  <!-- JS will populate this -->
-
                              </div>
-
                              <div class="bg-gray-600 border border-gray-500 rounded-md p-2">
-
                                  <textarea id="ex-field-${organizationField.id}" class="w-full bg-transparent border-none focus:ring-0 text-white p-0" rows="4"></textarea>
-
                                  <div id="ex-media-preview" class="mt-2"></div>
-
                              </div>
-
                         </div>
-
                         <div class="md:col-span-1">
-
                             <label class="${labelClasses}">${criteriaField.label}</label>
-
                             <textarea id="ex-field-${criteriaField.id}" class="${baseClasses}" rows="4"></textarea>
-
                         </div>
-
                     </div>
-
                 </div>
-
             `;
-
         }
-
-
-
+        
         window.createNewExercise = async () => {
-
              if (!userId) {
-
                  showToast("Erro: Utilizador não autenticado.", true);
-
                  return;
-
              }
-
             try {
-
-
-                // UPDATED: Path to public collection and add createdBy
-
                 const newDocRef = await addDoc(collection(db, `public_exercises`), {
-
                     name: "Novo Exercício...",
-
                     createdAt: serverTimestamp(),
-
                     createdBy: userId 
-
                 });
-
                 showExerciseEditor(newDocRef.id);
-
             } catch (error) {
-
                 console.error("Error creating new exercise document:", error);
-
                 showToast("Não foi possível criar um novo exercício.", true);
-
             }
-
         };
-
-
 
         window.showExerciseEditor = async (exerciseId = null) => {
-
             currentEditingExerciseId = exerciseId;
-
             currentExerciseData = {};
-
-
-
+            
             populateExerciseForm(); 
-
             const form = document.getElementById('exercise-form');
-
             const footer = document.getElementById('exercise-editor-footer');
-
-
-
+            
             if (!exerciseId) {
-
                 showToast("ID de exercício inválido.", true);
-
                 showView('exercise-library-view');
-
                 return;
-
             }
 
-
-
             try {
-
                 const docSnap = await getDoc(doc(db, `public_exercises`, exerciseId));
-
                 if (docSnap.exists()) {
-
                     const data = docSnap.data();
-
                     const isOwner = data.createdBy === userId;
 
-
-
                     currentExerciseData = data;
-
-
-
+                    
                     // Populate form fields with data
-
                     const allFields = [...exerciseFields, {id: 'tipo'}, ...staticExerciseLoadFields];
-
                     allFields.forEach(field => {
-
                         const el = document.getElementById(`ex-field-${field.id}`);
-
                         if(el && data[field.id]) {
-
                              el.value = data[field.id];
-
                         }
-
                     });
-
                     if (data.name === "Novo Exercício...") {
-
                         document.getElementById('ex-field-name').value = "";
-
                         document.getElementById('ex-field-name').placeholder = "Dê um nome ao exercício";
-
                     }
-
-
 
                     // Handle media preview
-
                     const mediaPreview = document.getElementById('ex-media-preview');
-
                     const orgTextarea = document.getElementById('ex-field-organization');
-
                     mediaPreview.innerHTML = '';
-
                     orgTextarea.style.display = 'block';
 
-
-
                     if (data.mediaUrl) {
-
                         if (data.mediaType?.startsWith('image/')) {
-
                             mediaPreview.innerHTML = `<img src="${data.mediaUrl}" class="rounded-md max-h-40 w-auto">`;
-
                         } else if (data.mediaType?.startsWith('video/')) {
-
                             mediaPreview.innerHTML = `<video src="${data.mediaUrl}" controls class="rounded-md max-h-40 w-auto"></video>`;
-
                         }
-
                         orgTextarea.style.display = 'none';
-
                     }
-
-
-
+                    
                     // Handle footer buttons and form state based on ownership
-
                     const mediaContainer = document.getElementById('ex-media-container');
-
                     if (isOwner) {
-
                         footer.innerHTML = `
-
                             <button type="button" onclick="window.cancelExerciseEdit()" class="btn btn-secondary">Cancelar</button>
-
                             <button type="button" onclick="window.saveExercise()" class="btn btn-primary">Guardar Exercício</button>
-
                         `;
-
                         mediaContainer.innerHTML = `
-
                             <div class="flex justify-between items-center w-full">
-
                                 <label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>
-
                                 <button type="button" onclick="window.showImageGalleryModal(null, null, true)" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Adicionar da Galeria</button>
-
                             </div>
-
                         `;
-
                         form.querySelectorAll('input, textarea, select').forEach(el => el.disabled = false);
-
                     } else {
-
                         footer.innerHTML = `
-
                             <button type="button" onclick="window.showView('exercise-library-view')" class="btn btn-secondary">Voltar à Biblioteca</button>
-
                         `;
-
                         mediaContainer.innerHTML = `<label class="block text-sm font-medium text-gray-400">Organização/Esquema</label>`;
-
                         form.querySelectorAll('input, textarea, select').forEach(el => el.disabled = true);
-
                     }
-
-
 
                 } else {
-
                     showToast("Exercício não encontrado.", true);
-
                     showView('exercise-library-view');
-
                     return;
-
                 }
-
             } catch (error) { 
-
                 console.error("Error loading exercise:", error);
-
                 showToast("Erro ao carregar o exercício.", true);
-
                 return;
-
             }
-
             showView('exercise-editor-view');
-
         };
-
-
-
+        
         // --- CONTENT MAP & CHART LOGIC ---
 
-
-
         function listenForContentLog() {
-
             if (!userId) return;
-
             const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
-
             onSnapshot(docRef, (docSnap) => {
-
                 if (docSnap.exists()) {
-
                     const data = docSnap.data();
-
                     contentLog = data.log || {};
-
                     numberOfSessions = data.sessionCount || 140;
-
                 } else {
-
                     contentLog = {};
-
                     numberOfSessions = 140;
-
                 }
-
                 if (document.getElementById('content-map-view').offsetParent !== null) {
-
                     renderContentGrid();
-
                 }
-
             });
-
         }
-
-
 
         function renderContentGrid() {
-
             const container = document.getElementById('content-grid-container');
-
             container.className = `grid grid-cols-12 md:grid-cols-24 gap-1`; // Make it responsive
-
             let gridHtml = '';
-
             for (let i = 0; i < numberOfSessions; i++) {
-
                 const isLogged = contentLog[i] && contentLog[i].length > 0;
-
                 gridHtml += `
-
                     <button onclick="window.showContentLogModal(${i})" 
-
                             class="session-square btn-secondary font-semibold rounded-md transition cursor-pointer p-0 ${isLogged ? 'logged' : ''}">
-
                         UT${i + 1}
-
                     </button>
-
                 `;
-
             }
-
             container.innerHTML = gridHtml;
-
         }
-
-
 
         async function addMoreSessions() {
-
             numberOfSessions += 12;
-
             try {
-
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
-
                 await setDoc(docRef, { sessionCount: numberOfSessions }, { merge: true });
-
                 showToast(`+12 sessões adicionadas.`);
-
             } catch (error) {
-
                 console.error("Error adding sessions:", error);
-
                 showToast("Erro ao adicionar sessões.", true);
-
                 numberOfSessions -= 12; // Revert on error
-
             }
-
         }
-
-
-
+        
         window.showContentLogModal = (sessionIndex) => {
-
             currentSessionIndex = sessionIndex;
-
             const modal = document.getElementById('content-log-modal');
-
             const container = document.getElementById('content-log-checkboxes');
-
             const title = document.getElementById('content-log-modal-title');
-
-
-
+            
             title.innerText = `Registar Conteúdos da Sessão UT${sessionIndex + 1}`;
-
-
-
+            
             let checkboxesHtml = '';
-
             for (const category in allExerciseTypes) {
-
                 const categoryId = category.replace(/[\s/]+/g, '-');
-
                 checkboxesHtml += `
-
                 <div class="mb-3">
-
                     <div class="flex justify-between items-center mb-2">
-
                         <h4 class="font-semibold text-white">${category}</h4>
-
                         <button onclick="window.addNewContentType('${category}')" class="btn btn-secondary py-0.5 px-2 text-xs">+ Adicionar</button>
-
                     </div>
-
                     <div id="new-content-form-${categoryId}"></div>
-
                     <div class="grid grid-cols-1 gap-2">`;
-
                 allExerciseTypes[category].forEach(type => {
-
                     const isChecked = contentLog[sessionIndex]?.includes(type);
-
                     checkboxesHtml += `
-
                         <label class="flex items-center space-x-2 text-sm">
-
                             <input type="checkbox" value="${type}" ${isChecked ? 'checked' : ''} class="form-checkbox bg-gray-600 border-gray-500 rounded text-indigo-500 focus:ring-indigo-500">
-
                             <span>${type}</span>
-
                         </label>
-
                     `;
-
                 });
-
                 checkboxesHtml += `</div></div>`;
-
             }
-
             container.innerHTML = checkboxesHtml;
-
             modal.classList.add('flex');
-
         };
-
-
 
         window.hideContentLogModal = () => {
-
              document.getElementById('content-log-modal').classList.remove('flex');
-
         };
-
-
-
+        
         window.addNewContentType = (category) => {
-
             const categoryId = category.replace(/[\s/]+/g, '-');
-
             const inputId = `new-content-input-${categoryId}`;
-
-
 
             if (document.getElementById(inputId)) return;
 
-
-
             const placeholderId = `new-content-form-${categoryId}`;
-
             const placeholder = document.getElementById(placeholderId);
-
-
-
+            
             if (placeholder) {
-
                 placeholder.innerHTML = `
-
                     <div class="flex gap-2 my-2">
-
                         <input type="text" id="${inputId}" placeholder="Novo conteúdo..." class="w-full text-sm bg-gray-900 border-gray-600 rounded-md py-1 px-2 text-white flex-grow">
-
                         <button onclick="window.saveNewContentTypeHandler('${category}')" class="btn btn-primary text-xs py-1 px-2">Guardar</button>
-
                     </div>
-
                 `;
-
                 document.getElementById(inputId).focus();
-
             }
-
         };
-
-
 
         window.saveNewContentTypeHandler = async (category) => {
-
             const categoryId = category.replace(/[\s/]+/g, '-');
-
             const inputId = `new-content-input-${categoryId}`;
-
             const inputElement = document.getElementById(inputId);
-
             const newType = inputElement.value;
 
-
-
             if (newType && newType.trim() !== '') {
-
                 const trimmedType = newType.trim();
-
                 if (allExerciseTypes[category].includes(trimmedType)) {
-
                     showToast(`"${trimmedType}" já existe.`, true);
-
                     return;
-
                 }
-
-
 
                 const updatedTypes = JSON.parse(JSON.stringify(allExerciseTypes));
-
                 updatedTypes[category].push(trimmedType);
-
-
-
+                
                 try {
-
                     const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, 'contentTypes');
-
                     await setDoc(docRef, updatedTypes);
-
                     showToast(`"${trimmedType}" adicionado a ${category}.`);
-
                 } catch (error) {
-
                     console.error("Error adding new content type:", error);
-
                     showToast("Erro ao adicionar novo conteúdo.", true);
-
                 }
-
             } else {
-
                 const placeholder = document.getElementById(`new-content-form-${categoryId}`);
-
                 if(placeholder) placeholder.innerHTML = '';
-
             }
-
         };
 
-
-
         async function saveContentLog() {
-
             if (currentSessionIndex === null || !userId) return;
 
-
-
             const selectedContents = [];
-
             document.querySelectorAll('#content-log-checkboxes input[type="checkbox"]:checked').forEach(input => {
-
                 selectedContents.push(input.value);
-
             });
-
-
 
             const newLog = { ...contentLog, [currentSessionIndex]: selectedContents };
 
-
-
             try {
-
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
-
                 await setDoc(docRef, { log: newLog }, { merge: true });
-
                 showToast(`Sessão UT${currentSessionIndex + 1} atualizada.`);
-
                 hideContentLogModal();
-
             } catch (error) {
-
                 console.error("Error saving content log:", error);
-
                 showToast("Erro ao guardar o registo.", true);
-
             }
-
         }
-
-
-
+        
         async function deleteContentLog() {
-
             if (currentSessionIndex === null || !userId) return;
-
-
 
             delete contentLog[currentSessionIndex];
 
-
-
             try {
-
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/content_logs`, 'main_log');
-
                 await setDoc(docRef, { log: contentLog }, { merge: true });
-
                 showToast(`Registo da Sessão UT${currentSessionIndex + 1} apagado.`);
-
                 hideContentLogModal();
-
             } catch (error) {
-
                 console.error("Error deleting content log:", error);
-
                 showToast("Erro ao apagar o registo.", true);
-
             }
-
         }
 
-
-
         function generateContentChart() {
-
             if (Object.keys(contentLog).length === 0) {
-
                 showToast("Nenhum conteúdo registado para gerar gráfico.", true);
-
                 return;
-
             }
-
-
 
             const contentCount = {};
-
             Object.values(allExerciseTypes).flat().forEach(type => contentCount[type] = 0);
 
-
-
             for (const session in contentLog) {
-
                 contentLog[session].forEach(type => {
-
                     if (contentCount.hasOwnProperty(type)) {
-
                         contentCount[type]++;
-
                     }
-
                 });
-
             }
-
-
-
+            
             const findCategory = (type) => {
-
                 for (const category in allExerciseTypes) {
-
                     if (allExerciseTypes[category].includes(type)) {
-
                         return category;
-
                     }
-
                 }
-
                 return null;
-
             };
-
-
 
             const categoryOrder = Object.keys(allExerciseTypes);
 
-
-
             const sortedContent = Object.entries(contentCount)
-
                 .filter(([, count]) => count > 0)
-
                 .sort(([typeA, countA], [typeB, countB]) => {
-
                     const categoryA = findCategory(typeA);
-
                     const categoryB = findCategory(typeB);
-
                     const indexA = categoryOrder.indexOf(categoryA);
-
                     const indexB = categoryOrder.indexOf(categoryB);
 
-
-
                     if (indexA !== indexB) {
-
                         return indexA - indexB;
-
                     }
 
-
-
                     return countB - countA;
-
                 });
-
-
-
+            
             if(sortedContent.length === 0) {
-
                  showToast("Nenhum conteúdo registado para gerar gráfico.", true);
-
                  return;
-
             }
-
-
-
+            
             const labels = sortedContent.map(([type]) => type);
-
             const data = sortedContent.map(([, count]) => count);
 
-
-
             const categoryColors = {
-
                 'Capacidades Físicas': 'rgba(59, 130, 246, 0.8)',
-
                 'Capacidades Coordenativas': 'rgba(16, 185, 129, 0.8)',
-
                 'Conteúdos Técnico Táticos': 'rgba(239, 68, 68, 0.8)',
-
                 'Capacidades Psicológicas/cognitivas': 'rgba(168, 85, 247, 0.8)'
-
             };
-
             const categoryBorders = {
-
                  'Capacidades Físicas': 'rgba(59, 130, 246, 1)',
-
                 'Capacidades Coordenativas': 'rgba(16, 185, 129, 1)',
-
                 'Conteúdos Técnico Táticos': 'rgba(239, 68, 68, 1)',
-
                 'Capacidades Psicológicas/cognitivas': 'rgba(168, 85, 247, 1)'
-
             };
-
-
-
 
 
             const backgroundColors = labels.map(label => categoryColors[findCategory(label)] || 'rgba(107, 114, 128, 0.8)');
-
             const borderColors = labels.map(label => categoryBorders[findCategory(label)] || 'rgba(107, 114, 128, 1)');
 
 
-
-
-
             const chartContainer = document.getElementById('chart-container');
-
             chartContainer.style.display = 'block';
-
             const ctx = document.getElementById('content-chart').getContext('2d');
 
-
-
             if (contentChart) {
-
                 contentChart.destroy();
-
             }
 
-
-
             contentChart = new Chart(ctx, {
-
                 type: 'bar',
-
                 data: {
-
                     labels: labels,
-
                     datasets: [{
-
                         label: 'Nº de Vezes Trabalhado',
-
                         data: data,
-
                         backgroundColor: backgroundColors,
-
                         borderColor: borderColors,
-
                         borderWidth: 1
-
                     }]
-
                 },
-
                 options: {
-
                     indexAxis: 'y',
-
                     scales: {
-
                         x: {
-
                             beginAtZero: true,
-
                             ticks: { color: '#d1d5db', stepSize: 1 }
-
                         },
-
                         y: {
-
                             ticks: { color: '#d1d5db' }
-
                         }
-
                     },
-
                     plugins: {
-
                         legend: {
-
                             display: false // We use the custom HTML legend
-
                         }
-
                     }
-
                 }
-
             });
-
         }
-
-
-
 
 
         // --- UTILITY FUNCTIONS (Toast, Modal, PDF, Library Modal) ---
-
-
-
+        
         function showFirebaseRulesModal() {
-
             const modal = document.getElementById('firebase-rules-modal');
-
             if (modal) {
-
                 modal.classList.add('flex');
-
             }
-
         }
-
-
 
         window.showExerciseLibraryModal = (sectionId) => {
-
             currentSectionIdForAddingExercise = sectionId;
-
             document.getElementById('library-search-input').value = '';
-
             renderExerciseLibraryForSelection('');
-
             document.getElementById('exercise-library-modal').classList.add('flex');
-
         };
-
-
 
         window.hideExerciseLibraryModal = () => {
-
             document.getElementById('exercise-library-modal').classList.remove('flex');
-
         };
-
-
 
         async function renderExerciseLibraryForSelection(filterText) {
-
             if (!userId) return;
-
             const container = document.getElementById('library-modal-list-container');
-
             container.innerHTML = '<p class="text-center text-gray-500">A carregar exercícios...</p>';
 
-
-
             // UPDATED: Path to public collection
-
             const q = query(collection(db, `public_exercises`));
-
             const snapshot = await getDocs(q);
 
-
-
             if (snapshot.empty) {
-
                 container.innerHTML = '<p class="text-center text-gray-500">A biblioteca partilhada está vazia.</p>';
-
                 return;
-
             }
-
-
 
             const exercises = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
             const lowerCaseFilter = filterText.toLowerCase();
-
             const filteredExercises = exercises.filter(ex => ex.name.toLowerCase().includes(lowerCaseFilter));
-
-
-
+            
             if (filteredExercises.length === 0) {
-
                 container.innerHTML = '<p class="text-center text-gray-500">Nenhum exercício encontrado.</p>';
-
                 return;
-
             }
-
-
 
             container.innerHTML = filteredExercises.map(ex => `
-
                 <div class="bg-gray-700 rounded-lg p-3 flex justify-between items-center">
-
                     <div>
-
                         <h4 class="font-semibold text-white">${ex.name}</h4>
-
                         <p class="text-xs text-gray-400">${(ex.description || '').substring(0, 50)}...</p>
-
                     </div>
-
                     <button onclick="window.addExerciseFromLibraryToPlan('${ex.id}')" class="btn btn-primary text-sm">Adicionar</button>
-
                 </div>
-
             `).join('');
-
         }
-
-
 
         window.addExerciseFromLibraryToPlan = async (exerciseId) => {
-
             if (!userId || !currentSectionIdForAddingExercise) return;
 
-
-
             try {
-
                 // UPDATED: Path to public collection
-
                 const docSnap = await getDoc(doc(db, `public_exercises`, exerciseId));
-
                 if (docSnap.exists()) {
-
                     const exerciseData = docSnap.data();
-
-
-
+                    
                     const newPlanExercise = {
-
                         id: Date.now(),
-
                         descricao: exerciseData.name || '',
-
                         tipo: exerciseData.tipo || '',
-
                         organizacao: exerciseData.organization || '',
-
                         criteriosExito: exerciseData.successCriteria || '',
-
                         repeticoes: exerciseData.repeticoes || '',
-
                         series: exerciseData.series || '',
-
                         pausa: exerciseData.pausa || '',
-
                         intensidade: exerciseData.intensidade || '',
-
                         tempo: exerciseData.tempo || '',
-
                         mediaUrl: exerciseData.mediaUrl || '',
-
                         filePath: exerciseData.filePath || '',
-
                         mediaType: exerciseData.mediaType || ''
-
                     };
 
-
-
                     if (!currentTrainingPlan[currentSectionIdForAddingExercise]) {
-
                         currentTrainingPlan[currentSectionIdForAddingExercise] = [];
-
                     }
-
                     currentTrainingPlan[currentSectionIdForAddingExercise].push(newPlanExercise);
-
                     renderTrainingPlanExercises();
-
                     showToast(`'${exerciseData.name}' adicionado ao plano.`);
-
                 }
-
             } catch (error) {
-
                 console.error("Error adding exercise from library:", error);
-
                 showToast("Erro ao adicionar exercício.", true);
-
             }
-
         };
-
-
 
         function showToast(message, isError = false, isLoading = false, id = null) {
-
             const container = document.getElementById('toast-container');
-
             const toastId = id || `toast-${Date.now()}`;
-
-
-
+            
             let existingToast = document.getElementById(toastId);
-
             if (existingToast) {
-
                 existingToast.remove();
-
             }
-
-
-
+            
             existingToast = document.createElement('div');
-
             existingToast.id = toastId;
-
             container.appendChild(existingToast);
 
-
-
             const bgColor = isError ? 'bg-red-500' : (isLoading ? 'bg-blue-500' : 'bg-green-500');
-
             existingToast.className = `transform transition-all duration-300 text-white py-2 px-4 rounded-lg shadow-lg`;
-
             existingToast.innerHTML = message;
-
             existingToast.classList.add(bgColor);
 
-
-
             setTimeout(() => {
-
                 existingToast.classList.add('opacity-100', 'translate-y-0');
-
                 existingToast.classList.remove('opacity-0', 'translate-y-20');
-
             }, 10);
 
-
-
             if (!isLoading) {
-
                 setTimeout(() => {
-
                     existingToast.classList.add('opacity-0', 'translate-y-20');
-
                     setTimeout(() => existingToast.remove(), 300);
-
                 }, 4000);
-
             }
-
             return toastId;
-
         }
-
-
-
+        
         function showConfirmationModal(titleText, messageText) {
-
             const modal = document.getElementById('confirmation-modal');
-
             const title = document.getElementById('confirm-title');
-
             const message = document.getElementById('confirm-message');
-
             title.innerText = titleText;
-
             message.innerText = messageText;
-
             modal.classList.add('flex');
-
         }
-
-
 
         window.confirmDelete = (type, id) => {
-
             if (type === 'plan') {
-
                 confirmAction = () => deleteTrainingPlan(id);
-
                 showConfirmationModal(
-
                     "Apagar Plano de Treino?",
-
                     "Esta ação irá apagar permanentemente o plano e todos os seus dados. Não pode ser revertida."
-
                 );
-
             } else if (type === 'exercise') {
-
                 confirmAction = () => deleteExercise(id);
-
                  showConfirmationModal(
-
                     "Apagar Exercício?",
-
                     "O exercício será removido da biblioteca partilhada. Apenas o autor o pode fazer."
-
                 );
-
-
             } else if (type === 'galleryImage') {
-
-
                 confirmAction = () => deleteGalleryImage(id);
-
-
                 showConfirmationModal("Apagar Imagem?", "Esta ação irá apagar a imagem da galeria. Não pode ser revertida.");
-
             }
-
         };
-
-
 
         function hideConfirmationModal() {
-
             document.getElementById('confirmation-modal').classList.remove('flex');
-
             confirmAction = () => {};
-
         }
-
-
-
+        
         // --- FUNÇÃO DE EXPORTAÇÃO DE PDF MELHORADA ---
-
         window.exportPlanToPDF = () => {
-
             const toastId = showToast("A gerar PDF...", false, true);
 
-
-
             // 1. Criar o HTML para impressão
-
             const plan = currentTrainingPlan;
-
             let printableHtml = `
-
                 <style>
-
                     body { font-family: 'Inter', sans-serif; color: #333; }
-
                     .header-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; border-bottom: 2px solid #ccc; padding-bottom: 1rem; margin-bottom: 1rem; }
-
                     .header-item { font-size: 12px; }
-
                     .header-item strong { display: block; color: #555; }
-
                     .section { margin-top: 1.5rem; }
-
                     .section h2 { font-size: 1.5rem; color: #111; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
-
                     .exercise { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
-
                     .exercise-title { font-size: 1.1rem; font-weight: bold; }
-
                     .exercise-details { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin: 0.5rem 0; font-size: 11px; text-align: center;}
-
                     .exercise-text { font-size: 12px; white-space: pre-wrap; word-wrap: break-word; }
-
                     .exercise-media { max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 0.5rem; }
-
                 </style>
-
                 <h1>Plano de Treino Nº ${plan.header['Plano.Nº'] || ''} - ${plan.header.Data || ''}</h1>
-
                 <div class="header-grid">
-
             `;
-
             planMetadataFields.forEach(field => {
-
                 if (field.type !== 'textarea') {
-
                     printableHtml += `<div class="header-item"><strong>${field.label}:</strong> ${plan.header[field.id] || '-'}</div>`;
-
                 }
-
             });
-
             printableHtml += `</div>`;
-
             planMetadataFields.forEach(field => {
-
                  if (field.type === 'textarea') {
-
                     printableHtml += `<div class="header-item"><strong>${field.label}:</strong><div class="exercise-text">${plan.header[field.id] || '-'}</div></div>`;
-
                 }
-
             });
-
-
 
             trainingSections.forEach(section => {
-
                 printableHtml += `<div class="section"><h2>${section.title}</h2>`;
-
                 (plan[section.id] || []).forEach(ex => {
-
                     printableHtml += `
-
                         <div class="exercise">
-
                             <div class="exercise-title">${ex.descricao || 'Exercício sem nome'}</div>
-
                             <div class="exercise-details">
-
                                 <div><strong>Repetições:</strong> ${ex.repeticoes || '-'}</div>
-
                                 <div><strong>Séries:</strong> ${ex.series || '-'}</div>
-
                                 <div><strong>Pausa:</strong> ${ex.pausa || '-'}</div>
-
                                 <div><strong>Intensidade:</strong> ${ex.intensidade || '-'}</div>
-
                                 <div><strong>Tempo:</strong> ${ex.tempo || '-'} min</div>
-
                             </div>
-
                             <div><strong>Organização:</strong> <div class="exercise-text">${ex.organizacao || '-'}</div></div>`;
-
                     if (ex.mediaUrl) {
-
                         printableHtml += `<img src="${ex.mediaUrl}" class="exercise-media">`;
-
                     }
-
                     printableHtml += `<div><strong>Critérios de Êxito:</strong> <div class="exercise-text">${ex.criteriosExito || '-'}</div></div>`;
-
                     printableHtml += `</div>`;
-
                 });
-
                 printableHtml += `</div>`;
-
             });
-
-
 
             // 2. Usar o HTML gerado para criar o PDF
-
             const element = document.createElement('div');
-
             element.innerHTML = printableHtml;
 
-
-
             html2pdf().from(element).set({
-
                 margin: 0.5,
-
                 filename: `Plano_${plan.header['Plano.Nº'] || 'SN'}_${plan.header['Data'] || 'SD'}.pdf`,
-
                 image: { type: 'jpeg', quality: 0.98 },
-
                 html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-
             }).save().then(() => {
-
                 showToast("PDF gerado com sucesso!", false, false, toastId);
-
             }).catch(err => {
-
                 showToast("Erro ao gerar PDF.", true, false, toastId);
-
                 console.error("Erro no PDF:", err);
-
             });
-
         };
-
     </script>
-
 </body>
-
 </html>
-
-~
-0 commit commentsComments0 (0)
-
-
-You're not receiving 
